@@ -1,0 +1,18 @@
+{
+    "name": "media-share-backend",
+    "version": "1.0.0",
+    "description": "在线书影音分享平台后端",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "mongodb": "^6.3.0",
+        "dotenv": "^16.3.1",
+        "cors": "^2.8.5",
+        "bcryptjs": "^2.4.3",
+        "jsonwebtoken": "^9.0.2"
+    }
+}
