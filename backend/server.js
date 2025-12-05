@@ -17,6 +17,22 @@ app.get('/api/hello', (req, res) => {
     });
 });
 
+
+// 在 server.js 中添加
+app.get('/', (req, res) => {
+    res.json({
+        code: 200,
+        message: '在线影视分享平台 API 服务运行中',
+        data: {
+            version: '1.0.0',
+            endpoints: {
+                api: 'http://localhost:3000/api',
+                docs: '请查看项目文档'
+            }
+        }
+    });
+});
+
 // 错误处理中间件
 app.use((err, req, res, next) => {
     console.error(err.stack);

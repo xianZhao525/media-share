@@ -1,23 +1,37 @@
 <template>
   <div id="app">
-    <nav>
-      <router-link to="/">首页</router-link> |
-      <router-link to="/login">登录</router-link> |
-      <router-link to="/register">注册</router-link>
-    </nav>
-    <router-view/>
+    <NavBar />
+    <main class="main-content">
+      <router-view />
+    </main>
+    <footer class="app-footer">
+      <div class="container">
+        <p>© 2024 MediaShare - 在线影视分享平台</p>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
-// 空脚本，保持响应式
+import NavBar from '@/components/NavBar.vue';
 </script>
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem 0;
+}
+
+.app-footer {
+  background: #333;
+  color: white;
+  padding: 1rem 0;
+  text-align: center;
 }
 </style>

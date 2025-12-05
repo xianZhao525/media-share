@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './db/connection.js';
+import searchRoutes from './routes/search.js';
 
 // 导入所有路由
 import authRoutes from './routes/auth.js';       // 角色一
@@ -24,7 +25,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api', activityRoutes);
-app.use('/api', searchRoutes); // 你的搜索路由
+// app.use('/api', searchRoutes); 
+app.use('/api/search', searchRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {

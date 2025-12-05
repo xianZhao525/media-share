@@ -9,6 +9,8 @@ import ItemCreate from '@/views/ItemCreate.vue'; // 角色二
 import ActivityFeed from '@/views/ActivityFeed.vue'; // 角色四
 import UserProfile from '@/views/UserProfile.vue';   // 角色四
 
+const PlaceholderComponent = { template: '<div>功能开发中...</div>' }
+
 const routes = [
   {
     path: '/',

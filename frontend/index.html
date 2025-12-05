@@ -1,13 +1,33 @@
 <!DOCTYPE html>
-<html lang="">
-  <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在线影视分享平台</title>
+
+  <!-- 添加CSP策略，允许字体加载 -->
+  <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval';
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data:;
+      img-src 'self' data: https: http:;
+      connect-src 'self' http://localhost:3000 ws://localhost:*;
+    ">
+
+  <!-- 或者更宽松的开发环境策略 -->
+  <!-- 
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+    ">
+    -->
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>
