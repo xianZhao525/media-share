@@ -28,7 +28,7 @@ const router = createRouter({
       component: () => import('@/views/ItemCreate.vue'),
       meta: {
         title: '创建内容 - 媒体分享平台',
-        requiresAuth: true
+        requiresAuth: false
       }
     },
     {

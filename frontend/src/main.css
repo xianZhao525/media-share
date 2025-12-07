@@ -1,0 +1,3 @@
+/* 主样式文件 */
+:root { --primary-color: #0072ff; }
+body { background: #f8f9fa; }

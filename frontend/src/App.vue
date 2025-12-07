@@ -27,9 +27,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 
-const router = useRouter();
 
 onMounted(() => {
   // 可以在这里添加一些初始化逻辑
