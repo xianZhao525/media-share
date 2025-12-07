@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+  
+
   },
   "dependencies": {
     "vue": "^3.3.4",
@@ -21,4 +23,5 @@
     "eslint": "^8.47.0",
     "eslint-plugin-vue": "^9.17.0"
   }
+
 }

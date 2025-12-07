@@ -1,25 +1,46 @@
-// backend/db/connection.js
+// backend/db/connection.js - MongoDB 原生驱动版本
 const { MongoClient, ObjectId } = require('mongodb');
-require('dotenv').config();
 
 class MongoDBConnection {
   constructor() {
-    this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/media_share';
     this.client = null;
     this.db = null;
+    this.isConnected = false;
+    this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+    this.dbName = process.env.DB_NAME || 'media_share';
   }
 
   async connect() {
     try {
-      this.client = new MongoClient(this.uri);
-      await this.client.connect();
-      this.db = this.client.db();
-      console.log('✅ MongoDB connected successfully');
+      console.log(`🚀 Connecting to MongoDB: ${this.uri}/${this.dbName}`);
       
+      // 创建 MongoClient 实例
+      this.client = new MongoClient(this.uri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      
+      // 连接到数据库
+      await this.client.connect();
+      
+      // 获取数据库实例
+      this.db = this.client.db(this.dbName);
+      this.isConnected = true;
+      
+      console.log('✅ MongoDB connected successfully');
+      console.log(`📊 Database: ${this.dbName}`);
+      
+      // 创建索引
       await this.createIndexes();
+      
+      // 测试连接
+      await this.db.command({ ping: 1 });
+      console.log('✅ Database ping successful');
+      
       return this.db;
     } catch (error) {
-      console.error('❌ MongoDB connection error:', error);
+      console.error('❌ MongoDB connection error:', error.message);
       throw error;
     }
   }
@@ -28,72 +49,60 @@ class MongoDBConnection {
     try {
       const itemsCollection = this.db.collection('items');
       
-      // 文本索引
-      await itemsCollection.createIndex(
-        { title: 'text', description: 'text', tags: 'text' },
-        { 
-          name: 'text_search',
-          weights: { title: 10, description: 5, tags: 3 }
-        }
-      );
-
-      // 其他索引
-      await itemsCollection.createIndex({ type: 1, createdAt: -1 });
-      await itemsCollection.createIndex({ userId: 1, createdAt: -1 });
-      await itemsCollection.createIndex({ viewCount: -1 });
+      // 创建索引
+      await itemsCollection.createIndex({ type: 1 });
+      await itemsCollection.createIndex({ createdAt: -1 });
+      await itemsCollection.createIndex({ userId: 1 });
       await itemsCollection.createIndex({ tags: 1 });
+      await itemsCollection.createIndex({ isFeatured: 1 });
+      await itemsCollection.createIndex({ isHot: 1 });
+      await itemsCollection.createIndex({ 'rating.averageScore': -1 });
       
-      console.log('✅ Indexes created');
+      console.log('✅ Indexes created successfully');
     } catch (error) {
-      console.error('❌ Error creating indexes:', error);
+      console.log('⚠️  Index creation warning:', error.message);
     }
   }
 
   getCollection(collectionName) {
-    if (!this.db) throw new Error('Database not connected');
+    if (!this.isConnected || !this.db) {
+      throw new Error('Database not connected. Call connect() first.');
+    }
     return this.db.collection(collectionName);
   }
 
   isValidObjectId(id) {
     try {
       if (!id) return false;
-      
-      // 检查是否是有效的24字符十六进制字符串
-      if (typeof id === 'string') {
-        return /^[0-9a-fA-F]{24}$/.test(id);
-      }
-      
-      // 检查是否是ObjectId实例
-      if (id instanceof ObjectId) {
-        return true;
-      }
-      
-      return false;
+      return ObjectId.isValid(id);
     } catch {
       return false;
     }
   }
 
   createObjectId(id) {
-    try {
-      if (!id) return new ObjectId();
-      
-      if (typeof id === 'string' && this.isValidObjectId(id)) {
-        return new ObjectId(id);
-      }
-      
-      throw new Error('Invalid ObjectId');
-    } catch (error) {
-      throw new Error(`Failed to create ObjectId: ${error.message}`);
-    }
+    if (!id) return new ObjectId();
+    return new ObjectId(id);
   }
 
   async close() {
-    if (this.client) {
+    if (this.client && this.isConnected) {
       await this.client.close();
-      console.log('MongoDB connection closed');
+      this.isConnected = false;
+      console.log('✅ MongoDB connection closed');
     }
+  }
+
+  getConnectionStatus() {
+    return {
+      isConnected: this.isConnected,
+      database: this.dbName,
+      collections: this.db ? this.db.listCollections().toArray() : []
+    };
   }
 }
 
-module.exports = new MongoDBConnection();
+// 创建单例实例
+const instance = new MongoDBConnection();
+
+module.exports = instance;
