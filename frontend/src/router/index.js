@@ -32,6 +32,12 @@ const routes = [
     component: () => import('../views/ItemDetail.vue')
   },
   {
+    path: '/ItemDetail',  // 注意大小写！路径是区分大小写的
+    name: 'ItemDetailPage',
+    component: () => import('../views/ItemDetail.vue'),
+    props: { itemId: 'default-123' }  // 传递默认的 itemId
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/ProfileView.vue')
