@@ -6,6 +6,55 @@ const { ObjectId } = require('mongodb');
 
 // ==================== 静态路由（必须放在动态路由之前） ====================
 
+// 中间件：处理图片URL（添加代理前缀）
+const processImageUrls = (req, res, next) => {
+  // 保存原始send方法
+  const originalSend = res.send;
+  
+  // 重写send方法
+  res.send = function(data) {
+    try {
+      if (typeof data === 'string') {
+        // 尝试解析JSON
+        const parsed = JSON.parse(data);
+        if (parsed.data && Array.isArray(parsed.data)) {
+          // 处理数组数据
+          parsed.data = parsed.data.map(item => {
+            if (item.cover && item.cover.includes('doubanio.com')) {
+              return {
+                ...item,
+                originalCover: item.cover,
+                cover: `${req.protocol}://${req.get('host')}/api/proxy/image?url=${encodeURIComponent(item.cover)}&type=douban`
+              };
+            }
+            return item;
+          });
+        } else if (parsed.data && parsed.data.cover) {
+          // 处理单个对象
+          if (parsed.data.cover.includes('doubanio.com')) {
+            parsed.data = {
+              ...parsed.data,
+              originalCover: parsed.data.cover,
+              cover: `${req.protocol}://${req.get('host')}/api/proxy/image?url=${encodeURIComponent(parsed.data.cover)}&type=douban`
+            };
+          }
+        }
+        data = JSON.stringify(parsed);
+      }
+    } catch (error) {
+      console.error('处理图片URL时出错:', error);
+    }
+    
+    // 调用原始的send方法
+    originalSend.call(this, data);
+  };
+  
+  next();
+};
+
+// 在所有路由上应用图片URL处理
+router.use(processImageUrls);
+
 // 1. 获取所有内容列表
 router.get('/', async (req, res) => {
   try {
