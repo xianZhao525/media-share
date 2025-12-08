@@ -67,18 +67,13 @@
   import { useRoute } from 'vue-router'
   import ReviewForm from '../components/ReviewForm.vue'
   import ReviewList from '../components/ReviewList.vue'
+  import { itemApi } from '../utils/api.js'
   
   const route = useRoute()
   
-  // 模拟 auth store
-  const authStore = {
-    isAuthenticated: true,
-    token: 'mock-token-123'
-  }
-  
   const editingReview = ref(null)
   const itemDetails = ref({})
-  const averageRating = ref(4.5)
+  const averageRating = ref(0)
   const loading = ref(false)
   
   // 从路由参数获取 itemId
@@ -86,7 +81,10 @@
     return route.params.id || 'demo-content-123'
   })
   
-  const isAuthenticated = computed(() => authStore.isAuthenticated)
+  // 检查是否登录
+  const isAuthenticated = computed(() => {
+    return !!localStorage.getItem('token')
+  })
   
   onMounted(() => {
     console.log('ItemDetail 加载，itemId:', itemId.value)
@@ -97,19 +95,37 @@
   const loadItemDetails = async () => {
     loading.value = true
     try {
-      // 模拟数据
-      await new Promise(resolve => setTimeout(resolve, 300))
+      // 调用真实API
+      const response = await itemApi.getItem(itemId.value)
+      
+      if (response.code === 200) {
+        itemDetails.value = response.data
+        averageRating.value = response.data.averageRating || 0
+      } else {
+        // 如果API失败，使用模拟数据
+        console.log('使用模拟数据')
+        itemDetails.value = {
+          id: itemId.value,
+          title: itemId.value.includes('demo') ? '演示内容' : `内容 ${itemId.value}`,
+          type: '电影',
+          description: '这是一个示例内容，用于展示评论功能。',
+          averageRating: 4.5,
+          createdAt: new Date().toISOString()
+        }
+        averageRating.value = itemDetails.value.averageRating
+      }
+    } catch (error) {
+      console.error('加载内容详情失败:', error)
+      // 使用模拟数据
       itemDetails.value = {
         id: itemId.value,
-        title: itemId.value.includes('demo') ? '演示内容' : `内容 ${itemId.value}`,
+        title: '示例内容',
         type: '电影',
         description: '这是一个示例内容，用于展示评论功能。',
         averageRating: 4.5,
         createdAt: new Date().toISOString()
       }
       averageRating.value = itemDetails.value.averageRating
-    } catch (error) {
-      console.error('加载内容详情失败:', error)
     } finally {
       loading.value = false
     }
@@ -119,12 +135,11 @@
     try {
       console.log('提交评论:', reviewData, 'itemId:', itemId.value)
       
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
+      // 这里不需要手动调用API，ReviewForm已经处理了
+      // 只需要显示成功消息
       alert('评论发表成功！')
       
-      // 刷新内容
+      // 刷新内容详情（重新获取平均分）
       loadItemDetails()
     } catch (error) {
       console.error('发表评论失败:', error)
@@ -144,13 +159,11 @@
     try {
       console.log('更新评论:', reviewData, 'itemId:', itemId.value)
       
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      editingReview.value = null
+      // 这里不需要手动调用API，ReviewForm已经处理了
       alert('评论更新成功！')
       
-      // 刷新内容
+      editingReview.value = null
+      // 刷新内容详情
       loadItemDetails()
     } catch (error) {
       console.error('更新评论失败:', error)
@@ -160,13 +173,20 @@
   
   const handleReviewDeleted = (reviewId) => {
     console.log('评论已删除:', reviewId)
+    // 刷新内容详情
     loadItemDetails()
   }
   
   // 切换登录状态（测试用）
   const toggleLogin = () => {
-    authStore.isAuthenticated = !authStore.isAuthenticated
-    console.log('登录状态:', authStore.isAuthenticated)
+    const token = localStorage.getItem('token')
+    if (token) {
+      localStorage.removeItem('token')
+    } else {
+      // 模拟一个token（实际应该从登录API获取）
+      localStorage.setItem('token', 'mock-token-123')
+    }
+    window.location.reload()
   }
   </script>
 

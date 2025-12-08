@@ -241,303 +241,284 @@
     </div>
   </template>
 
-  <script setup>
-    import { ref, computed, onMounted } from 'vue'
-    import RatingStars from './RatingStars.vue'
+<script setup>
+  import { ref, computed, onMounted, watch } from 'vue'
+  import RatingStars from './RatingStars.vue'
+  import { reviewApi } from '../utils/api.js'
+  
+  const props = defineProps({
+    itemId: {
+      type: String,
+      required: true
+    },
+    averageRating: {
+      type: Number,
+      default: 0
+    }
+  })
+  
+  const emit = defineEmits(['edit-review', 'delete-review', 'refresh'])
+  
+  // 响应式数据
+  const reviews = ref([])
+  const loading = ref(true)
+  const sortBy = ref('recent')
+  const currentPage = ref(1)
+  const totalReviews = ref(0)
+  const totalPages = ref(1)
+  const ratingDistribution = ref([])
+  const showDeleteModal = ref(false)
+  const reviewToDelete = ref(null)
+  const realAverageRating = ref(0)
+  
+  // 配置项
+  const pageSize = 10
+  const sortOptions = [
+    { label: '最新', value: 'recent', icon: '🕒' },
+    { label: '最热', value: 'popular', icon: '🔥' },
+    { label: '评分最高', value: 'highest', icon: '⭐' },
+    { label: '评分最低', value: 'lowest', icon: '⬇️' }
+  ]
+  
+  // 计算属性
+  const visiblePages = computed(() => {
+    const pages = []
+    const maxVisible = 5
     
-    const props = defineProps({
-      itemId: {
-        type: String,
-        required: true
-      },
-      averageRating: {
-        type: Number,
-        default: 0
+    if (totalPages.value <= maxVisible) {
+      for (let i = 1; i <= totalPages.value; i++) {
+        pages.push(i)
       }
-    })
-    
-    const emit = defineEmits(['edit-review', 'delete-review', 'refresh'])
-    
-    // 模拟 auth store
-    const authStore = {
-      isAuthenticated: true,  // 设为已登录，方便测试
-      token: 'mock-token-123'
+    } else {
+      let start = Math.max(1, currentPage.value - 2)
+      let end = Math.min(totalPages.value, start + maxVisible - 1)
+      
+      if (end - start + 1 < maxVisible) {
+        start = end - maxVisible + 1
+      }
+      
+      if (start > 1) {
+        pages.push(1)
+        if (start > 2) pages.push('...')
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+      
+      if (end < totalPages.value) {
+        if (end < totalPages.value - 1) pages.push('...')
+        pages.push(totalPages.value)
+      }
     }
     
-    // 响应式数据
-    const reviews = ref([])
-    const loading = ref(true)
-    const sortBy = ref('recent')
-    const currentPage = ref(1)
-    const totalReviews = ref(0)
-    const totalPages = ref(1)
-    const ratingDistribution = ref([])
-    const showDeleteModal = ref(false)
-    const reviewToDelete = ref(null)
-    
-    // 配置项
-    const pageSize = 10
-    const sortOptions = [
-      { label: '最新', value: 'recent', icon: '🕒' },
-      { label: '最热', value: 'popular', icon: '🔥' },
-      { label: '评分最高', value: 'highest', icon: '⭐' },
-      { label: '评分最低', value: 'lowest', icon: '⬇️' }
+    return pages
+  })
+  
+  // 监听itemId变化
+  watch(() => props.itemId, () => {
+    loadReviews(1)
+  })
+  
+  // 生命周期
+  onMounted(() => {
+    loadReviews()
+  })
+  
+  // 方法
+  const loadReviews = async (page = 1) => {
+    loading.value = true
+    try {
+      // 构建查询参数
+      const params = {
+        page,
+        pageSize,
+        sortBy: sortBy.value
+      }
+      
+      // 调用真实API
+      const response = await reviewApi.getReviews(props.itemId, params)
+      
+      if (response.code === 200) {
+        const { reviews: reviewList, pagination, ratingDistribution: distribution } = response.data
+        
+        reviews.value = reviewList
+        totalReviews.value = pagination.totalReviews
+        totalPages.value = pagination.totalPages
+        ratingDistribution.value = distribution
+        currentPage.value = pagination.page
+        
+        // 计算真实的平均评分
+        if (distribution.length > 0) {
+          const total = distribution.reduce((sum, dist) => sum + dist.rating * dist.count, 0)
+          realAverageRating.value = total / totalReviews.value
+        }
+        
+        emit('refresh', realAverageRating.value)
+      } else {
+        console.error('获取评论失败:', response.message)
+      }
+    } catch (error) {
+      console.error('加载评论失败:', error)
+      // 回退到模拟数据
+      loadMockData(page)
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // 模拟数据（备用）
+  const loadMockData = (page = 1) => {
+    const mockReviews = [
+      {
+        _id: 'review1',
+        user: {
+          _id: 'user1',
+          username: '张三',
+          avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
+        },
+        rating: 5,
+        content: '这个内容太棒了！强烈推荐给大家。',
+        likes: 12,
+        isLiked: true,
+        isOwner: true,
+        createdAt: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        _id: 'review2',
+        user: {
+          _id: 'user2',
+          username: '李四',
+          avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
+        },
+        rating: 4,
+        content: '不错的内容，但还有些可以改进的地方。',
+        likes: 8,
+        isLiked: false,
+        isOwner: false,
+        createdAt: new Date(Date.now() - 86400000).toISOString()
+      }
     ]
     
-    // 计算属性
-    const visiblePages = computed(() => {
-      const pages = []
-      const maxVisible = 5
+    const startIndex = (page - 1) * pageSize
+    const paginatedReviews = mockReviews.slice(startIndex, startIndex + pageSize)
+    
+    reviews.value = paginatedReviews
+    totalReviews.value = mockReviews.length
+    totalPages.value = Math.ceil(mockReviews.length / pageSize)
+    ratingDistribution.value = [
+      { rating: 5, count: 1, percentage: 50 },
+      { rating: 4, count: 1, percentage: 50 },
+      { rating: 3, count: 0, percentage: 0 },
+      { rating: 2, count: 0, percentage: 0 },
+      { rating: 1, count: 0, percentage: 0 }
+    ]
+    currentPage.value = page
+  }
+  
+  const handleSort = (sortValue) => {
+    sortBy.value = sortValue
+    loadReviews(1)
+  }
+  
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages.value || page === '...') return
+    loadReviews(page)
+  }
+  
+  const handleEdit = (review) => {
+    emit('edit-review', review)
+  }
+  
+  const handleDelete = (reviewId) => {
+    reviewToDelete.value = reviewId
+    showDeleteModal.value = true
+  }
+  
+  const closeModal = () => {
+    showDeleteModal.value = false
+    reviewToDelete.value = null
+  }
+  
+  const confirmDelete = async () => {
+    if (!reviewToDelete.value) return
+    
+    try {
+      const response = await reviewApi.deleteReview(reviewToDelete.value)
       
-      if (totalPages.value <= maxVisible) {
-        for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i)
-        }
+      if (response.code === 200) {
+        // 重新加载评论
+        loadReviews(currentPage.value)
+        emit('delete-review', reviewToDelete.value)
+        emit('refresh')
       } else {
-        let start = Math.max(1, currentPage.value - 2)
-        let end = Math.min(totalPages.value, start + maxVisible - 1)
-        
-        if (end - start + 1 < maxVisible) {
-          start = end - maxVisible + 1
-        }
-        
-        if (start > 1) {
-          pages.push(1)
-          if (start > 2) pages.push('...')
-        }
-        
-        for (let i = start; i <= end; i++) {
-          pages.push(i)
-        }
-        
-        if (end < totalPages.value) {
-          if (end < totalPages.value - 1) pages.push('...')
-          pages.push(totalPages.value)
-        }
+        alert(response.message || '删除失败，请重试')
       }
+    } catch (error) {
+      console.error('删除评论失败:', error)
+      alert('删除失败，请重试')
+    } finally {
+      closeModal()
+    }
+  }
+  
+  const toggleLike = async (review) => {
+    // 检查是否登录
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('请先登录后再点赞')
+      return
+    }
+    
+    try {
+      const response = await reviewApi.toggleLike(review._id)
       
-      return pages
-    })
-    
-    // 生命周期
-    onMounted(() => {
-      loadReviews()
-    })
-    
-    // 方法
-    const loadReviews = async (page = 1) => {
-      loading.value = true
-      try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        // 模拟数据
-        const mockReviews = [
-          {
-            _id: 'review1',
-            user: {
-              _id: 'user1',
-              username: '张三',
-              avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
-            },
-            rating: 5,
-            content: '这个内容太棒了！强烈推荐给大家。',
-            likes: 12,
-            isLiked: true,
-            isOwner: true,
-            createdAt: new Date(Date.now() - 3600000).toISOString() // 1小时前
-          },
-          {
-            _id: 'review2',
-            user: {
-              _id: 'user2',
-              username: '李四',
-              avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
-            },
-            rating: 4,
-            content: '不错的内容，但还有些可以改进的地方。',
-            likes: 8,
-            isLiked: false,
-            isOwner: false,
-            createdAt: new Date(Date.now() - 86400000).toISOString() // 1天前
-          },
-          {
-            _id: 'review3',
-            user: {
-              _id: 'user3',
-              username: '王五',
-              avatar: 'https://randomuser.me/api/portraits/men/67.jpg'
-            },
-            rating: 3,
-            content: '一般般，没有想象中的好。',
-            likes: 3,
-            isLiked: false,
-            isOwner: false,
-            createdAt: new Date(Date.now() - 172800000).toISOString() // 2天前
-          },
-          {
-            _id: 'review4',
-            user: {
-              _id: 'user4',
-              username: '赵六',
-              avatar: 'https://randomuser.me/api/portraits/women/23.jpg'
-            },
-            rating: 5,
-            content: '非常出色的内容，细节处理得很好！',
-            likes: 15,
-            isLiked: true,
-            isOwner: false,
-            createdAt: new Date(Date.now() - 259200000).toISOString() // 3天前
-          },
-          {
-            _id: 'review5',
-            user: {
-              _id: 'user5',
-              username: '孙七',
-              avatar: 'https://randomuser.me/api/portraits/men/89.jpg'
-            },
-            rating: 2,
-            content: '有些失望，质量不如宣传的那么好。',
-            likes: 1,
-            isLiked: false,
-            isOwner: false,
-            createdAt: new Date(Date.now() - 345600000).toISOString() // 4天前
-          }
-        ]
-        
-        // 模拟分页
-        const startIndex = (page - 1) * pageSize
-        const paginatedReviews = mockReviews.slice(startIndex, startIndex + pageSize)
-        
-        reviews.value = paginatedReviews
-        totalReviews.value = mockReviews.length
-        totalPages.value = Math.ceil(mockReviews.length / pageSize)
-        
-        // 模拟评分分布
-        ratingDistribution.value = [
-          { rating: 5, count: 2, percentage: 40 },
-          { rating: 4, count: 1, percentage: 20 },
-          { rating: 3, count: 1, percentage: 20 },
-          { rating: 2, count: 1, percentage: 20 },
-          { rating: 1, count: 0, percentage: 0 }
-        ]
-        
-        currentPage.value = page
-      } catch (error) {
-        console.error('加载评论失败:', error)
-      } finally {
-        loading.value = false
-      }
-    }
-    
-    const handleSort = (sortValue) => {
-      sortBy.value = sortValue
-      loadReviews(1)
-    }
-    
-    const goToPage = (page) => {
-      if (page < 1 || page > totalPages.value || page === '...') return
-      loadReviews(page)
-    }
-    
-    const handleEdit = (review) => {
-      emit('edit-review', review)
-    }
-    
-    const handleDelete = (reviewId) => {
-      reviewToDelete.value = reviewId
-      showDeleteModal.value = true
-    }
-    
-    const closeModal = () => {
-      showDeleteModal.value = false
-      reviewToDelete.value = null
-    }
-    
-    const confirmDelete = async () => {
-      if (!reviewToDelete.value) return
-      
-      try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // 模拟删除评论
-        const index = reviews.value.findIndex(r => r._id === reviewToDelete.value)
-        if (index !== -1) {
-          const deletedReview = reviews.value[index]
-          reviews.value.splice(index, 1)
-          totalReviews.value--
-          totalPages.value = Math.ceil(totalReviews.value / pageSize)
-          
-          if (currentPage.value > totalPages.value) {
-            currentPage.value = totalPages.value
-          }
-          
-          // 更新评分分布（模拟）
-          if (deletedReview.rating === 5) {
-            ratingDistribution.value[0].count--
-            ratingDistribution.value[0].percentage = Math.round((ratingDistribution.value[0].count / totalReviews.value) * 100)
-          } else if (deletedReview.rating === 4) {
-            ratingDistribution.value[1].count--
-            ratingDistribution.value[1].percentage = Math.round((ratingDistribution.value[1].count / totalReviews.value) * 100)
-          }
-          
-          emit('delete-review', reviewToDelete.value)
-          emit('refresh')
-        }
-      } catch (error) {
-        console.error('删除评论失败:', error)
-        alert('删除失败，请重试')
-      } finally {
-        closeModal()
-      }
-    }
-    
-    const toggleLike = async (review) => {
-      if (!authStore.isAuthenticated) {
-        alert('请先登录后再点赞')
-        return
-      }
-      
-      try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
+      if (response.code === 200) {
+        // 更新本地数据
         const index = reviews.value.findIndex(r => r._id === review._id)
         if (index !== -1) {
-          reviews.value[index].isLiked = !reviews.value[index].isLiked
-          reviews.value[index].likes += reviews.value[index].isLiked ? 1 : -1
+          reviews.value[index].isLiked = response.data.liked
+          reviews.value[index].likes = response.data.likes
         }
-      } catch (error) {
-        console.error('点赞失败:', error)
-      }
-    }
-    
-    const formatTime = (dateString) => {
-      const date = new Date(dateString)
-      const now = new Date()
-      const diffInSeconds = Math.floor((now - date) / 1000)
-      
-      if (diffInSeconds < 60) {
-        return '刚刚'
-      } else if (diffInSeconds < 3600) {
-        return `${Math.floor(diffInSeconds / 60)}分钟前`
-      } else if (diffInSeconds < 86400) {
-        return `${Math.floor(diffInSeconds / 3600)}小时前`
-      } else if (diffInSeconds < 2592000) {
-        return `${Math.floor(diffInSeconds / 86400)}天前`
       } else {
-        return date.toLocaleDateString('zh-CN', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        })
+        alert(response.message || '点赞失败，请重试')
+      }
+    } catch (error) {
+      console.error('点赞失败:', error)
+      // 模拟操作（如果API失败）
+      const index = reviews.value.findIndex(r => r._id === review._id)
+      if (index !== -1) {
+        reviews.value[index].isLiked = !reviews.value[index].isLiked
+        reviews.value[index].likes += reviews.value[index].isLiked ? 1 : -1
       }
     }
+  }
+  
+  const formatTime = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
     
-    const handleAvatarError = (event) => {
-      event.target.src = '/default-avatar.png'
+    if (diffInSeconds < 60) {
+      return '刚刚'
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)}分钟前`
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)}小时前`
+    } else if (diffInSeconds < 2592000) {
+      return `${Math.floor(diffInSeconds / 86400)}天前`
+    } else {
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
     }
+  }
+  
+  const handleAvatarError = (event) => {
+    event.target.src = '/default-avatar.png'
+  }
   </script>
   
   <style scoped>

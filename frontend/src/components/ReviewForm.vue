@@ -58,6 +58,7 @@
   
   <script setup>
     import { ref, reactive, watch } from 'vue'
+    import { reviewApi } from '../utils/api.js'
     
     const props = defineProps({
       itemId: {
@@ -76,12 +77,6 @@
     
     const emit = defineEmits(['submit', 'cancel'])
     
-    // 模拟 auth store
-    const authStore = {
-      isAuthenticated: true,  // 设为已登录，方便测试
-      token: 'mock-token-123'
-    }
-    
     const loading = ref(false)
     
     const model = reactive({
@@ -98,7 +93,9 @@
     }, { immediate: true })
     
     const handleSubmit = async () => {
-      if (!authStore.isAuthenticated) {
+      // 检查是否登录
+      const token = localStorage.getItem('token')
+      if (!token) {
         alert('请先登录后再发表评论')
         return
       }
@@ -116,22 +113,35 @@
       loading.value = true
     
       try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        emit('submit', {
+        const reviewData = {
           rating: model.rating,
           content: model.content.trim()
-        })
+        }
+    
+        let response;
         
-        // 清空表单
-        if (!props.editing) {
-          model.content = ''
-          model.rating = 5
+        if (props.editing) {
+          // 更新评论
+          response = await reviewApi.updateReview(props.initialData._id, reviewData)
+        } else {
+          // 发表新评论
+          response = await reviewApi.createReview(props.itemId, reviewData)
+        }
+    
+        if (response.code === 201 || response.code === 200) {
+          emit('submit', reviewData)
+          
+          // 清空表单（如果是新建）
+          if (!props.editing) {
+            model.content = ''
+            model.rating = 5
+          }
+        } else {
+          alert(response.message || '提交失败，请重试')
         }
       } catch (error) {
         console.error('提交评论失败:', error)
-        alert('提交失败，请重试')
+        alert('提交失败，请检查网络连接')
       } finally {
         loading.value = false
       }

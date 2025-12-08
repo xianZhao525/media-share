@@ -1,18 +1,29 @@
 {
-    "name": "media-share-backend",
+    "name": "media-share-backend-reviews",
     "version": "1.0.0",
-    "description": "在线书影音分享平台后端",
-    "main": "server.js",
+    "description": "评论评分模块 - 在线影视平台",
+    "type": "module",
+    "main": "src/app.js",
     "scripts": {
-        "start": "node server.js",
-        "dev": "node server.js"
+      "start": "node src/app.js",
+      "dev": "nodemon src/app.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
     },
+    "keywords": ["评论", "评分", "MongoDB", "Vue", "全栈"],
+    "author": "角色三",
+    "license": "MIT",
     "dependencies": {
-        "express": "^4.18.2",
-        "mongodb": "^6.3.0",
-        "dotenv": "^16.3.1",
-        "cors": "^2.8.5",
-        "bcryptjs": "^2.4.3",
-        "jsonwebtoken": "^9.0.2"
+      "bcryptjs": "^2.4.3",
+      "cors": "^2.8.5",
+      "dotenv": "^16.3.1",
+      "express": "^4.18.2",
+      "jsonwebtoken": "^9.0.2",
+      "mongodb": "^6.2.0"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    },
+    "engines": {
+      "node": ">=18.0.0"
     }
-}
+  }
