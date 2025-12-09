@@ -21,7 +21,35 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/images', express.static(path.join(__dirname, '../frontend/public/images')));
+// 在 app.js 中，替换你之前为 /images 添加的中间件，用下面这个：
+app.use('/images', (req, res, next) => {
+  console.log(`🔍 [诊断] 请求静态文件: ${req.url}`);
+  console.log(`🔍 [诊断] 请求头 Origin: ${req.headers.origin}`);
+  
+  // 设置完备的CORS头
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true'); // 如果需要凭证
+  res.setHeader('Access-Control-Expose-Headers', '*');
+  
+  // 关键：设置被认为“安全”的响应头
+  res.setHeader('Content-Type', 'image/jpeg'); // 会根据文件类型动态设置，这里示意
+  res.setHeader('Cache-Control', 'public, max-age=3600'); // 明确的缓存策略
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // 关键！
+  res.setHeader('Access-Control-Allow-Private-Network', 'true'); // 本地开发可能需要
+  
+  // 如果是OPTIONS预检请求，直接返回200
+  if (req.method === 'OPTIONS') {
+    console.log(`🔍 [诊断] 处理OPTIONS预检请求`);
+    return res.status(200).end();
+  }
+  
+  console.log(`🔍 [诊断] 设置的响应头:`, res.getHeaders());
+  next(); // 传递给 express.static
+}, express.static(path.join(__dirname, '../frontend/public/images')));
+
+
 
 // 导入路由
 const itemRoutes = require('./routes/itemRoutes');
