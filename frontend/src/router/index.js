@@ -1,55 +1,41 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
+  // 将活动流作为首页
   {
     path: '/',
-    name: 'Home',
-    component: () => import('../views/HomeView.vue')
+    name: 'ActivityFeed',
+    component: () => import('@/views/ActivityFeed.vue')  // 使用 @ 别名
+  },
+  {
+    path: '/feed',
+    redirect: '/'  // 重定向到首页
   },
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue')
+    component: () => import('@/views/Login.vue')
   },
   {
     path: '/register',
     name: 'Register',
-    component: () => import('../views/Register.vue')
+    component: () => import('@/views/Register.vue')
   },
   {
     path: '/explore',
     name: 'Explore',
-    component: () => import('../views/ExploreView.vue')
-  },
-  {
-    path: '/item/create',
-    name: 'ItemCreate',
-    component: () => import('../views/ItemCreate.vue')
-  },
-  {
-    path: '/item/:id',
-    name: 'ItemDetail',
-    component: () => import('../views/ItemDetail.vue')
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('../views/ProfileView.vue')
+    component: () => import('@/views/ExploreView.vue')
   },
   {
     path: '/user/:id',
     name: 'UserProfile',
-    component: () => import('../views/UserProfile.vue')
+    component: () => import('@/views/UserProfile.vue')
   },
-  {
-    path: '/search',
-    name: 'Search',
-    component: () => import('../views/SearchResults.vue')
-  }
+  // 其他路由...
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 
