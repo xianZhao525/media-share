@@ -251,8 +251,28 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FollowButton from './FollowButton.vue'
+import { activityApi } from '@/api/activityApi';
+
 // 假设有ActivityItem组件
 // import ActivityItem from './ActivityItem.vue'
+
+// 加载用户动态
+const loadUserActivities = async () => {
+  try {
+    const response = await activityApi.getUserActivities(userId, {
+      page: 1,
+      limit: 20
+    });
+    activities.value = response.data;
+  } catch (error) {
+    console.error('加载用户动态失败:', error);
+  }
+};
+
+// 在 onMounted 中调用
+onMounted(() => {
+  loadUserActivities();
+});
 
 const route = useRoute()
 const router = useRouter()
