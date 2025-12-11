@@ -10,11 +10,11 @@ const routes = [
     name: 'ActivityFeed',
     component: () => import('@/views/ActivityFeed.vue')
   },
-  {
-    path: '/dynamic/:id',
-    name: 'DynamicDetail',
-    component: () => import('@/views/DynamicDetail.vue') // 如果需要详情页
-  },
+  // {
+  //   path: '/dynamic/:id',
+  //   name: 'DynamicDetail',
+  //   component: () => import('@/views/DynamicDetail.vue') // 如果需要详情页
+  // },
   {
     path: '/user/:id',
     name: 'UserProfile',
