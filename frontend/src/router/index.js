@@ -1,41 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
-  // 将活动流作为首页
   {
     path: '/',
+    redirect: '/activities/feed'
+  },
+  {
+    path: '/activities/feed',
     name: 'ActivityFeed',
-    component: () => import('@/views/ActivityFeed.vue')  // 使用 @ 别名
+    component: () => import('@/views/ActivityFeed.vue')
   },
   {
-    path: '/feed',
-    redirect: '/'  // 重定向到首页
-  },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue')
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/Register.vue')
-  },
-  {
-    path: '/explore',
-    name: 'Explore',
-    component: () => import('@/views/ExploreView.vue')
+    path: '/dynamic/:id',
+    name: 'DynamicDetail',
+    component: () => import('@/views/DynamicDetail.vue') // 如果需要详情页
   },
   {
     path: '/user/:id',
     name: 'UserProfile',
     component: () => import('@/views/UserProfile.vue')
-  },
-  // 其他路由...
+  }
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes
 })
 

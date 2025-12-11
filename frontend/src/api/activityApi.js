@@ -1,73 +1,100 @@
-// frontend/src/api/activityApi.js
-import axios from 'axios';
+// src/api/activityApi.js
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+import axios from 'axios'
 
-// 创建axios实例
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+const API_BASE_URL = 'http://localhost:3001/api'
 
-// 请求拦截器，添加token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+const activityApi = {
+  // 获取动态流
+  getFeed: async (params = {}) => {
+    const response = await axios.get(`${API_BASE_URL}/activities/feed`, { params })
+    return response.data
   },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
-// 响应拦截器
-api.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      // token过期或无效，跳转到登录页
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error.response?.data || error);
-  }
-);
-
-// API方法
-export const activityApi = {
-  // 获取个人动态流
-  getFeed: (params) => api.get('/activities/feed', { params }),
-  
   // 获取用户动态
-  getUserActivities: (userId, params) => 
-    api.get(`/activities/users/${userId}/activities`, { params }),
-  
-  // 创建动态
-  createActivity: (data) => api.post('/activities', data),
-  
+  getUserActivities: async (userId, params = {}) => {
+    const response = await axios.get(`${API_BASE_URL}/users/${userId}/activities`, { params })
+    return response.data
+  },
+
+  // 获取动态详情
+  getActivityDetail: async (activityId) => {
+    const response = await axios.get(`${API_BASE_URL}/activities/${activityId}`)
+    return response.data
+  },
+
+  // 发布动态
+  createActivity: async (data) => {
+    const response = await axios.post(`${API_BASE_URL}/activities`, data)
+    return response.data
+  },
+
+  // 点赞动态
+  likeActivity: async (activityId) => {
+    const response = await axios.post(`${API_BASE_URL}/activities/${activityId}/like`)
+    return response.data
+  },
+
+  // 取消点赞
+  unlikeActivity: async (activityId) => {
+    const response = await axios.delete(`${API_BASE_URL}/activities/${activityId}/like`)
+    return response.data
+  },
+
+  // 分享动态
+  shareActivity: async (activityId) => {
+    const response = await axios.post(`${API_BASE_URL}/activities/${activityId}/share`)
+    return response.data
+  },
+
+  // 获取动态评论
+  getActivityComments: async (activityId, params = {}) => {
+    const response = await axios.get(`${API_BASE_URL}/activities/${activityId}/comments`, { params })
+    return response.data
+  },
+
+  // 发布评论
+  postComment: async (activityId, data) => {
+    const response = await axios.post(`${API_BASE_URL}/activities/${activityId}/comments`, data)
+    return response.data
+  },
+
+  // 点赞评论
+  likeComment: async (commentId) => {
+    const response = await axios.post(`${API_BASE_URL}/comments/${commentId}/like`)
+    return response.data
+  },
+
+  // 取消点赞评论
+  unlikeComment: async (commentId) => {
+    const response = await axios.delete(`${API_BASE_URL}/comments/${commentId}/like`)
+    return response.data
+  },
+
   // 删除动态
-  deleteActivity: (activityId) => api.delete(`/activities/${activityId}`),
-  
-  // 点赞/取消点赞
-  toggleLike: (activityId) => api.post(`/activities/${activityId}/like`),
-  
-  // 获取评论
-  getComments: (activityId, params) => 
-    api.get(`/activities/${activityId}/comments`, { params }),
-  
-  // 添加评论
-  addComment: (activityId, data) => 
-    api.post(`/activities/${activityId}/comments`, data),
-  
-  // 获取统计信息
-  getStats: (userId) => api.get(`/activities/stats/${userId}`)
-};
+  deleteActivity: async (activityId) => {
+    const response = await axios.delete(`${API_BASE_URL}/activities/${activityId}`)
+    return response.data
+  },
+
+  // 删除评论
+  deleteComment: async (commentId) => {
+    const response = await axios.delete(`${API_BASE_URL}/comments/${commentId}`)
+    return response.data
+  },
+
+  // 上传图片
+  uploadImage: async (file) => {
+    const formData = new FormData()
+    formData.append('image', file)
+    
+    const response = await axios.post(`${API_BASE_URL}/upload/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  }
+}
+
+export { activityApi }

@@ -27,7 +27,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`✅ 后端服务器运行在 http://localhost:${PORT}`);
     console.log(`✅ 测试API: http://localhost:${PORT}/api/hello`);
