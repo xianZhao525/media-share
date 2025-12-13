@@ -3,27 +3,33 @@
     "version": "1.0.0",
     "description": "评论评分模块 - 在线影视平台",
     "type": "module",
-    "main": "src/app.js",
+    "main": "src/server.js",
     "scripts": {
-      "start": "node src/app.js",
-      "dev": "nodemon src/app.js",
-      "test": "echo \"Error: no test specified\" && exit 1"
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "keywords": ["评论", "评分", "MongoDB", "Vue", "全栈"],
+    "keywords": [
+        "评论",
+        "评分",
+        "MongoDB",
+        "Vue",
+        "全栈"
+    ],
     "author": "角色三",
     "license": "MIT",
     "dependencies": {
-      "bcryptjs": "^2.4.3",
-      "cors": "^2.8.5",
-      "dotenv": "^16.3.1",
-      "express": "^4.18.2",
-      "jsonwebtoken": "^9.0.2",
-      "mongodb": "^6.2.0"
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.22.1",
+        "jsonwebtoken": "^9.0.2",
+        "mongodb": "^6.2.0"
     },
     "devDependencies": {
-      "nodemon": "^3.0.1"
+        "nodemon": "^3.0.1"
     },
     "engines": {
-      "node": ">=18.0.0"
+        "node": ">=18.0.0"
     }
-  }
+}

@@ -94,11 +94,11 @@
     
     const handleSubmit = async () => {
       // 检查是否登录
-      const token = localStorage.getItem('token')
-      if (!token) {
-        alert('请先登录后再发表评论')
-        return
-      }
+      // const token = localStorage.getItem('token')
+      // if (!token) {
+      //   alert('请先登录后再发表评论')
+      //   return
+      // }
     
       if (!model.content.trim()) {
         alert('评论内容不能为空')

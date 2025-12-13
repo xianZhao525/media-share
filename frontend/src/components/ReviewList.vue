@@ -1,250 +1,212 @@
 <template>
-    <div class="review-list">
-      <!-- 评分统计头部 -->
-      <div class="review-header">
-        <h2 class="review-title">评论 · {{ totalReviews }}</h2>
-        
-        <div v-if="totalReviews > 0" class="review-summary">
-          <!-- 平均评分 -->
-          <div class="average-rating-section">
-            <div class="average-score">{{ averageRating.toFixed(1) }}</div>
-            <div class="rating-breakdown">
-              <RatingStars
-                :value="averageRating"
-                size="large"
-                :show-value="false"
-                :show-count="false"
-                :readonly="true"
+  <div class="review-list-tencent">
+    <!-- 评分概览 -->
+    <div class="rating-overview">
+      <div class="overview-main">
+        <div class="average-rating">
+          <span class="average-number">{{ averageRating.toFixed(1) }}</span>
+          <div class="average-details">
+            <RatingStars :value="averageRating" size="medium" :show-value="false" />
+            <span class="total-reviews">{{ totalReviews }} 条评论</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 评分分布 -->
+      <div class="rating-distribution-tencent">
+        <div v-for="dist in ratingDistribution" :key="dist.rating" class="dist-row">
+          <span class="dist-label">{{ dist.rating }}星</span>
+          <div class="dist-bar-container">
+            <div 
+              class="dist-bar" 
+              :style="{ width: `${dist.percentage}%` }"
+              :class="`rating-bar-${dist.rating}`"
+            ></div>
+          </div>
+          <span class="dist-percentage">{{ dist.percentage }}%</span>
+          <span class="dist-count">({{ dist.count }})</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 排序栏 -->
+    <div class="sort-bar">
+      <div class="sort-options-tencent">
+        <button
+          v-for="option in sortOptions"
+          :key="option.value"
+          class="sort-option"
+          :class="{ 'active': sortBy === option.value, 'disabled': loading }"
+          @click="handleSort(option.value)"
+        >
+          <span class="option-text">{{ option.label }}</span>
+          <span v-if="option.icon" class="option-icon">{{ option.icon }}</span>
+        </button>
+      </div>
+      
+      <div class="review-stats">
+        <span class="stats-text">共 {{ totalReviews }} 条评论</span>
+      </div>
+    </div>
+
+    <!-- 评论列表 -->
+    <div class="reviews-content">
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-state-tencent">
+        <div class="tencent-spinner"></div>
+        <p>正在加载评论...</p>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-else-if="reviews.length === 0" class="empty-state-tencent">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="#CCCCCC">
+          <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17l-.59.59-.58.58V4h16v12zM6 12h2v2H6zm0-3h2v2H6zm0-3h2v2H6zm4 6h5v2h-5zm0-3h8v2h-8zm0-3h8v2h-8z"/>
+        </svg>
+        <h3>还没有评论</h3>
+        <p>快来发表第一条评论吧</p>
+      </div>
+
+      <!-- 评论卡片 -->
+      <div v-else class="reviews-grid">
+        <div
+          v-for="review in reviews"
+          :key="review._id"
+          class="review-card-tencent"
+          :class="{ 'owner-card': review.isOwner }"
+        >
+          <div class="card-header">
+            <div class="user-avatar-tencent">
+              <img
+                :src="review.user?.avatar || '/default-avatar.png'"
+                :alt="review.user?.username"
+                @error="handleAvatarError"
               />
-              <span class="total-count">{{ totalReviews }} 条评论</span>
+              <div v-if="review.isOwner" class="owner-badge">作者</div>
+            </div>
+            
+            <div class="user-info-tencent">
+              <div class="user-name-tencent">{{ review.user?.username || '匿名用户' }}</div>
+              <div class="user-level">Lv.{{ Math.floor(Math.random() * 30) + 1 }}</div>
+            </div>
+            
+            <div class="review-meta-tencent">
+              <RatingStars :value="review.rating" size="small" :show-value="false" />
+              <span class="review-time">{{ formatTime(review.createdAt) }}</span>
             </div>
           </div>
-          
-          <!-- 评分分布 -->
-          <div v-if="ratingDistribution.length > 0" class="rating-distribution">
-            <div
-              v-for="(dist, index) in ratingDistribution"
-              :key="index"
-              class="distribution-row"
-            >
-              <div class="rating-label">
-                <span>{{ 5 - index }}星</span>
-                <RatingStars
-                  :value="5 - index"
-                  size="small"
-                  :show-value="false"
-                  :show-count="false"
-                  :readonly="true"
-                  :show-half-star="false"
-                />
-              </div>
-              
-              <div class="distribution-bar">
-                <div
-                  class="bar-fill"
-                  :style="{ width: `${dist.percentage}%` }"
-                  :class="`rating-${5 - index}`"
-                ></div>
-              </div>
-              
-              <div class="percentage">{{ dist.percentage }}%</div>
-              <div class="count">({{ dist.count }})</div>
+
+          <div class="card-body">
+            <p class="review-content-tencent">{{ review.content }}</p>
+            
+            <div v-if="review.images" class="review-images">
+              <img
+                v-for="(img, index) in review.images.slice(0, 3)"
+                :key="index"
+                :src="img"
+                class="review-image"
+              />
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 排序选项 -->
-      <div v-if="reviews.length > 0" class="sort-section">
-        <div class="sort-label">排序：</div>
-        <div class="sort-options">
-          <button
-            v-for="option in sortOptions"
-            :key="option.value"
-            class="sort-btn"
-            :class="{ 'active': sortBy === option.value }"
-            @click="handleSort(option.value)"
-            :disabled="loading"
-          >
-            {{ option.label }}
-            <span v-if="option.icon" class="sort-icon">{{ option.icon }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 评论列表 -->
-      <div class="reviews-container">
-        <!-- 加载状态 -->
-        <div v-if="loading" class="loading-state">
-          <div class="spinner"></div>
-          <p>正在加载评论...</p>
-        </div>
-
-        <!-- 空状态 -->
-        <div v-else-if="reviews.length === 0" class="empty-state">
-          <div class="empty-icon">💭</div>
-          <h3>暂时还没有评论</h3>
-          <p>成为第一个分享想法的人吧！</p>
-        </div>
-
-        <!-- 评论列表 -->
-        <div v-else class="reviews-list">
-          <div
-            v-for="review in reviews"
-            :key="review._id"
-            class="review-card"
-            :class="{ 'own-review': review.isOwner }"
-          >
-            <!-- 评论头部 -->
-            <div class="review-header">
-              <!-- 用户信息 -->
-              <div class="user-info">
-                <img
-                  :src="review.user?.avatar || '/default-avatar.png'"
-                  :alt="review.user?.username"
-                  class="user-avatar"
-                  @error="handleAvatarError"
-                />
-                <div class="user-details">
-                  <div class="user-name">{{ review.user?.username || '匿名用户' }}</div>
-                  <div class="review-meta">
-                    <RatingStars
-                      :value="review.rating"
-                      size="small"
-                      :show-value="false"
-                      :show-count="false"
-                      :readonly="true"
-                      :show-half-star="false"
-                    />
-                    <span class="review-time">{{ formatTime(review.createdAt) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 操作按钮 -->
-              <div v-if="review.isOwner" class="review-actions">
-                <button
-                  @click="handleEdit(review)"
-                  class="action-btn edit-btn"
-                  title="编辑评论"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#666"/>
-                  </svg>
-                </button>
-                <button
-                  @click="handleDelete(review._id)"
-                  class="action-btn delete-btn"
-                  title="删除评论"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#666"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- 评论内容 -->
-            <div class="review-content">
-              <p>{{ review.content }}</p>
-            </div>
-
-            <!-- 评论底部 -->
-            <div class="review-footer">
+          <div class="card-footer">
+            <div class="action-buttons">
               <button
                 @click="toggleLike(review)"
-                class="like-btn"
+                class="action-like"
                 :class="{ 'liked': review.isLiked }"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  class="like-icon"
-                >
-                  <path
-                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                    :fill="review.isLiked ? '#f44336' : 'none'"
-                    :stroke="review.isLiked ? '#f44336' : '#666'"
-                    stroke-width="1.5"
-                  />
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="currentColor" :fill="review.isLiked ? '#FF3366' : '#999'"
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
-                <span class="like-count">{{ review.likes || 0 }}</span>
+                <span>{{ review.likes || 0 }}</span>
+              </button>
+              
+              <button class="action-comment">
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path fill="#999" d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                </svg>
+                <span>回复</span>
+              </button>
+            </div>
+            
+            <div v-if="review.isOwner" class="owner-actions">
+              <button @click="handleEdit(review)" class="btn-edit">
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path fill="#666" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                编辑
+              </button>
+              <button @click="handleDelete(review._id)" class="btn-delete">
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path fill="#666" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+                删除
               </button>
             </div>
           </div>
         </div>
-
-        <!-- 分页 -->
-        <div v-if="totalPages > 1" class="pagination">
-          <button
-            @click="goToPage(currentPage - 1)"
-            :disabled="currentPage === 1 || loading"
-            class="page-btn prev-btn"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" fill="#666"/>
-            </svg>
-            上一页
-          </button>
-          
-          <div class="page-numbers">
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              @click="goToPage(page)"
-              :class="{
-                'page-btn': true,
-                'page-number': true,
-                'active': page === currentPage
-              }"
-              :disabled="loading || page === '...'"
-            >
-              {{ page }}
-            </button>
-          </div>
-          
-          <button
-            @click="goToPage(currentPage + 1)"
-            :disabled="currentPage === totalPages || loading"
-            class="page-btn next-btn"
-          >
-            下一页
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" fill="#666"/>
-            </svg>
-          </button>
-          
-          <div class="page-info">
-            第 {{ currentPage }} 页 / 共 {{ totalPages }} 页
-          </div>
-        </div>
       </div>
 
-      <!-- 删除确认模态框 -->
-      <div v-if="showDeleteModal" class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>确认删除</h3>
-            <button @click="closeModal" class="modal-close">×</button>
-          </div>
-          <div class="modal-body">
-            <p>确定要删除这条评论吗？此操作不可恢复。</p>
-          </div>
-          <div class="modal-footer">
-            <button @click="closeModal" class="btn btn-secondary">取消</button>
-            <button @click="confirmDelete" class="btn btn-danger">删除</button>
-          </div>
+      <!-- 分页 -->
+      <div v-if="totalPages > 1" class="tencent-pagination">
+        <button
+          @click="goToPage(currentPage - 1)"
+          :disabled="currentPage === 1"
+          class="pagination-btn prev-btn"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+          </svg>
+        </button>
+        
+        <div class="page-numbers-tencent">
+          <button
+            v-for="page in visiblePages"
+            :key="page"
+            @click="goToPage(page)"
+            :class="{
+              'page-number': true,
+              'active': page === currentPage,
+              'ellipsis': page === '...'
+            }"
+            :disabled="page === '...'"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button
+          @click="goToPage(currentPage + 1)"
+          :disabled="currentPage === totalPages"
+          class="pagination-btn next-btn"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </button>
+        
+        <div class="page-jump">
+          <span>前往</span>
+          <input
+            type="number"
+            v-model.number="jumpPage"
+            min="1"
+            :max="totalPages"
+            @keyup.enter="goToPage(jumpPage)"
+          />
+          <span>页</span>
         </div>
       </div>
     </div>
-  </template>
+  </div>
+</template>
 
 <script setup>
   import { ref, computed, onMounted, watch } from 'vue'
   import RatingStars from './RatingStars.vue'
   import { reviewApi } from '../utils/api.js'
+  import { defineExpose } from 'vue'
   
   const props = defineProps({
     itemId: {
@@ -464,11 +426,11 @@
   
   const toggleLike = async (review) => {
     // 检查是否登录
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('请先登录后再点赞')
-      return
-    }
+    // const token = localStorage.getItem('token')
+    // if (!token) {
+    //   alert('请先登录后再点赞')
+    //   return
+    // }
     
     try {
       const response = await reviewApi.toggleLike(review._id)
@@ -519,6 +481,7 @@
   const handleAvatarError = (event) => {
     event.target.src = '/default-avatar.png'
   }
+  defineExpose({ loadReviews }) 
   </script>
   
   <style scoped>
@@ -1110,4 +1073,537 @@
       padding: 6px 12px;
     }
   }
+  /* 在 ReviewList.vue 的 style 标签末尾添加这些样式 */
+
+.review-list-tencent {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.rating-overview {
+  display: flex;
+  padding: 32px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
+  border-bottom: 1px solid #e8f4ff;
+}
+
+.overview-main {
+  flex: 1;
+}
+
+.average-rating {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.average-number {
+  font-size: 64px;
+  font-weight: 700;
+  color: #006eff;
+  line-height: 1;
+}
+
+.average-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.total-reviews {
+  color: #666;
+  font-size: 14px;
+}
+
+.rating-distribution-tencent {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 24px;
+}
+
+.dist-label {
+  width: 40px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dist-bar-container {
+  flex: 1;
+  height: 8px;
+  background: #f0f7ff;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dist-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease-out;
+}
+
+.rating-bar-5 { background: linear-gradient(90deg, #ffc107, #ff9800); }
+.rating-bar-4 { background: linear-gradient(90deg, #4caf50, #8bc34a); }
+.rating-bar-3 { background: linear-gradient(90deg, #2196f3, #03a9f4); }
+.rating-bar-2 { background: linear-gradient(90deg, #9c27b0, #e91e63); }
+.rating-bar-1 { background: linear-gradient(90deg, #f44336, #ff5722); }
+
+.dist-percentage {
+  width: 40px;
+  text-align: right;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.dist-count {
+  width: 50px;
+  color: #999;
+  font-size: 12px;
+}
+
+.sort-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+}
+
+.sort-options-tencent {
+  display: flex;
+  gap: 8px;
+}
+
+.sort-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f8fbff;
+  border: 1px solid #e0f0ff;
+  border-radius: 20px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sort-option:hover:not(.disabled) {
+  background: #e0f0ff;
+  color: #006eff;
+  transform: translateY(-1px);
+}
+
+.sort-option.active {
+  background: #006eff;
+  border-color: #006eff;
+  color: white;
+}
+
+.sort-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.option-icon {
+  font-size: 12px;
+}
+
+.review-stats .stats-text {
+  color: #666;
+  font-size: 14px;
+}
+
+/* 加载状态 */
+.loading-state-tencent {
+  padding: 80px 0;
+  text-align: center;
+}
+
+.tencent-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  border: 3px solid #f0f7ff;
+  border-top-color: #006eff;
+  border-radius: 50%;
+  animation: tencent-spin 1s linear infinite;
+}
+
+@keyframes tencent-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 空状态 */
+.empty-state-tencent {
+  padding: 80px 0;
+  text-align: center;
+}
+
+.empty-state-tencent h3 {
+  margin: 20px 0 8px;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.empty-state-tencent p {
+  color: #999;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* 评论卡片 */
+.reviews-grid {
+  padding: 24px 32px;
+}
+
+.review-card-tencent {
+  background: white;
+  border: 1px solid #e8f4ff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.review-card-tencent:hover {
+  box-shadow: 0 8px 24px rgba(0, 110, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.review-card-tencent.owner-card {
+  border-left: 4px solid #006eff;
+  background: linear-gradient(to right, rgba(0, 110, 255, 0.02), white);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.user-avatar-tencent {
+  position: relative;
+}
+
+.user-avatar-tencent img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.owner-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #006eff;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.user-info-tencent {
+  flex: 1;
+}
+
+.user-name-tencent {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.user-level {
+  color: #ff9900;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.review-meta-tencent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.review-time {
+  color: #999;
+  font-size: 12px;
+}
+
+.card-body {
+  margin-bottom: 16px;
+}
+
+.review-content-tencent {
+  margin: 0;
+  line-height: 1.6;
+  color: #333;
+  font-size: 15px;
+}
+
+.review-images {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.review-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.review-image:hover {
+  transform: scale(1.05);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.action-like,
+.action-comment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.action-like:hover,
+.action-comment:hover {
+  background: #f8fbff;
+  color: #666;
+}
+
+.action-like.liked {
+  color: #ff3366;
+}
+
+.action-like.liked svg {
+  fill: #ff3366;
+}
+
+.owner-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-edit,
+.btn-delete {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fbff;
+  border: 1px solid #e0f0ff;
+  color: #666;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+  background: #e0f0ff;
+  color: #006eff;
+  border-color: #006eff;
+}
+
+.btn-delete:hover {
+  background: #fff0f0;
+  color: #f44336;
+  border-color: #ffcdd2;
+}
+
+/* 分页 */
+.tencent-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 0;
+  margin-top: 32px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e0f0ff;
+  background: white;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: #006eff;
+  color: #006eff;
+  transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.page-numbers-tencent {
+  display: flex;
+  gap: 4px;
+}
+
+.page-number {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e0f0ff;
+  background: white;
+  border-radius: 6px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-number:hover:not(.ellipsis) {
+  border-color: #006eff;
+  color: #006eff;
+}
+
+.page-number.active {
+  background: #006eff;
+  border-color: #006eff;
+  color: white;
+}
+
+.page-number.ellipsis {
+  cursor: default;
+  border: none;
+  background: transparent;
+}
+
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 24px;
+  color: #666;
+  font-size: 14px;
+}
+
+.page-jump input {
+  width: 60px;
+  padding: 6px 12px;
+  border: 1px solid #e0f0ff;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.page-jump input:focus {
+  outline: none;
+  border-color: #006eff;
+  box-shadow: 0 0 0 2px rgba(0, 110, 255, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .rating-overview {
+    flex-direction: column;
+    padding: 24px 20px;
+    gap: 24px;
+  }
+  
+  .average-rating {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .rating-distribution-tencent {
+    width: 100%;
+  }
+  
+  .sort-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
+  
+  .review-stats {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .reviews-grid {
+    padding: 20px;
+  }
+  
+  .card-header {
+    flex-wrap: wrap;
+  }
+  
+  .review-meta-tencent {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+  
+  .card-footer {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .tencent-pagination {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
   </style>
