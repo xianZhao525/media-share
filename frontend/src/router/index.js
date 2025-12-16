@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+// import { useAuthStore } from '@/stores/auth'  //原本没有这条，角色一添加的
 
 const routes = [
   {
