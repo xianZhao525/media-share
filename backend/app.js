@@ -1,13 +1,27 @@
-// backend/app.js - 添加测试数据的完整版本
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const dotenv = require('dotenv');
-const db = require('./db/connection');
-const path = require('path');
+// backend/app.js - ES 模块版本
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES 模块中获取 __dirname 的等价方式
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
+
+// 动态导入数据库连接（因为数据库可能使用 CommonJS）
+let db;
+try {
+  const dbModule = await import('./db/connection.js');
+  db = dbModule.default || dbModule;
+} catch (error) {
+  console.error('❌ 导入数据库模块失败:', error);
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,38 +35,44 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// 在 app.js 中，替换你之前为 /images 添加的中间件，用下面这个：
+
+// 静态文件服务中间件
 app.use('/images', (req, res, next) => {
   console.log(`🔍 [诊断] 请求静态文件: ${req.url}`);
   console.log(`🔍 [诊断] 请求头 Origin: ${req.headers.origin}`);
-  
+
   // 设置完备的CORS头
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true'); // 如果需要凭证
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Expose-Headers', '*');
-  
-  // 关键：设置被认为“安全”的响应头
-  res.setHeader('Content-Type', 'image/jpeg'); // 会根据文件类型动态设置，这里示意
-  res.setHeader('Cache-Control', 'public, max-age=3600'); // 明确的缓存策略
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // 关键！
-  res.setHeader('Access-Control-Allow-Private-Network', 'true'); // 本地开发可能需要
-  
+
+  // 关键：设置被认为"安全"的响应头
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+
   // 如果是OPTIONS预检请求，直接返回200
   if (req.method === 'OPTIONS') {
     console.log(`🔍 [诊断] 处理OPTIONS预检请求`);
     return res.status(200).end();
   }
-  
+
   console.log(`🔍 [诊断] 设置的响应头:`, res.getHeaders());
-  next(); // 传递给 express.static
+  next();
 }, express.static(path.join(__dirname, '../frontend/public/images')));
 
-
-
 // 导入路由
-const itemRoutes = require('./routes/itemRoutes');
+let itemRoutes;
+try {
+  const routesModule = await import('./routes/itemRoutes.js');
+  itemRoutes = routesModule.default || routesModule;
+} catch (error) {
+  console.error('❌ 导入路由模块失败:', error);
+  itemRoutes = express.Router(); // 创建空路由作为备用
+}
 
 // API路由
 app.use('/api/items', itemRoutes);
@@ -62,13 +82,13 @@ const createTestData = async () => {
   try {
     const itemsCollection = db.getCollection('items');
     const count = await itemsCollection.countDocuments({});
-    
+
     console.log(`📊 当前数据库有 ${count} 条数据`);
-    
+
     // 如果数据少于10条，创建测试数据
     if (count < 10) {
       console.log('📝 创建测试数据...');
-      
+
       const testItems = [
         // 电影数据
         {
@@ -123,7 +143,7 @@ const createTestData = async () => {
           createdAt: new Date('2023-03-01'),
           updatedAt: new Date('2023-03-01')
         },
-        
+
         // 电视剧数据
         {
           title: '漫长的季节',
@@ -164,7 +184,7 @@ const createTestData = async () => {
           createdAt: new Date('2023-02-20'),
           updatedAt: new Date('2023-02-20')
         },
-        
+
         // 动漫数据
         {
           title: '鬼灭之刃',
@@ -192,7 +212,7 @@ const createTestData = async () => {
           createdAt: new Date('2023-04-05'),
           updatedAt: new Date('2023-04-05')
         },
-        
+
         // 综艺数据
         {
           title: '奔跑吧第七季',
@@ -208,7 +228,7 @@ const createTestData = async () => {
           updatedAt: new Date('2023-05-01')
         }
       ];
-      
+
       // 插入测试数据
       const result = await itemsCollection.insertMany(testItems);
       const newCount = await itemsCollection.countDocuments({});
@@ -275,7 +295,7 @@ app.use('*', (req, res) => {
 // 错误处理中间件
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  
+
   res.status(err.status || 500).json({
     code: err.status || 500,
     data: null,
@@ -289,10 +309,10 @@ const startServer = async () => {
     // 连接数据库
     console.log('🔌 正在连接数据库...');
     await db.connect();
-    
+
     // 创建测试数据
     await createTestData();
-    
+
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
@@ -320,4 +340,4 @@ process.on('SIGTERM', async () => {
 
 startServer();
 
-module.exports = app;
+export default app;
