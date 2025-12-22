@@ -108,12 +108,12 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
-  
+
   // 设置页面标题
   if (to.meta.title) {
     document.title = to.meta.title;
   }
-  
+
   // 检查是否需要认证
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login', query: { redirect: to.fullPath } });

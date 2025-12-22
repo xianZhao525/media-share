@@ -1,5 +1,5 @@
 // backend/db/connection.js - MongoDB 原生驱动版本
-const { MongoClient, ObjectId } = require('mongodb');
+import { MongoClient, ObjectId } from 'mongodb';
 
 class MongoDBConnection {
   constructor() {
@@ -13,31 +13,31 @@ class MongoDBConnection {
   async connect() {
     try {
       console.log(`🚀 Connecting to MongoDB: ${this.uri}/${this.dbName}`);
-      
+
       // 创建 MongoClient 实例
       this.client = new MongoClient(this.uri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
       });
-      
+
       // 连接到数据库
       await this.client.connect();
-      
+
       // 获取数据库实例
       this.db = this.client.db(this.dbName);
       this.isConnected = true;
-      
+
       console.log('✅ MongoDB connected successfully');
       console.log(`📊 Database: ${this.dbName}`);
-      
+
       // 创建索引
       await this.createIndexes();
-      
+
       // 测试连接
       await this.db.command({ ping: 1 });
       console.log('✅ Database ping successful');
-      
+
       return this.db;
     } catch (error) {
       console.error('❌ MongoDB connection error:', error.message);
@@ -48,7 +48,7 @@ class MongoDBConnection {
   async createIndexes() {
     try {
       const itemsCollection = this.db.collection('items');
-      
+
       // 创建索引
       await itemsCollection.createIndex({ type: 1 });
       await itemsCollection.createIndex({ createdAt: -1 });
@@ -57,7 +57,7 @@ class MongoDBConnection {
       await itemsCollection.createIndex({ isFeatured: 1 });
       await itemsCollection.createIndex({ isHot: 1 });
       await itemsCollection.createIndex({ 'rating.averageScore': -1 });
-      
+
       console.log('✅ Indexes created successfully');
     } catch (error) {
       console.log('⚠️  Index creation warning:', error.message);
@@ -105,4 +105,4 @@ class MongoDBConnection {
 // 创建单例实例
 const instance = new MongoDBConnection();
 
-module.exports = instance;
+export default instance; 

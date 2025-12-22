@@ -1,6 +1,11 @@
 // backend/seed/mongodb-seed.js - 修复版本
+<<<<<<< HEAD
 const { MongoClient, ObjectId } = require('mongodb');
 require('dotenv').config();
+=======
+import { MongoClient, ObjectId } from 'mongodb';
+import dotenv from 'dotenv';
+>>>>>>> origin/feature/reviews
 
 const sampleData = [
   {
@@ -223,4 +228,8 @@ if (require.main === module) {
   seedDatabase().catch(console.error);
 }
 
+<<<<<<< HEAD
 module.exports = { sampleData, seedDatabase };
+=======
+export { sampleData, seedDatabase };  
+>>>>>>> origin/feature/reviews
