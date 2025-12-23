@@ -1,15 +1,9 @@
 // backend/routes/itemRoutes.js - 正确的路由顺序
-// const express = require('express');
-// const router = express.Router();
-// const db = require('../db/connection');
-// const { ObjectId } = require('mongodb');
-
 import express from 'express';
 import db from '../db/connection.js';
 import { ObjectId } from 'mongodb';
 
 const router = express.Router();
-// ==================== 静态路由（必须放在动态路由之前） ====================
 
 // 中间件：处理图片URL（添加代理前缀）
 const processImageUrls = (req, res, next) => {
@@ -125,7 +119,6 @@ router.get('/', async (req, res) => {
         case 'averageRating':
         case 'createdAt':
         case 'updatedAt':
-        case 'releaseYear':
           fieldName = sortField;
           break;
         case 'hot':
@@ -766,4 +759,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

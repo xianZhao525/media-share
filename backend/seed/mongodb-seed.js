@@ -1,11 +1,11 @@
 // backend/seed/mongodb-seed.js - 修复版本
-<<<<<<< HEAD
+// <<<<<<< HEAD
 const { MongoClient, ObjectId } = require('mongodb');
 require('dotenv').config();
-=======
-import { MongoClient, ObjectId } from 'mongodb';
-import dotenv from 'dotenv';
->>>>>>> origin/feature/reviews
+// =======
+// import { MongoClient, ObjectId } from 'mongodb';
+// import dotenv from 'dotenv';
+// >>>>>>> origin/feature/reviews
 
 const sampleData = [
   {
@@ -177,21 +177,21 @@ const sampleData = [
 
 async function seedDatabase() {
   const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
-  
+
   try {
     console.log('🔌 Connecting to MongoDB...');
     await client.connect();
     const db = client.db('media_share');
     const itemsCollection = db.collection('items');
-    
+
     console.log('🗑️  Clearing existing items...');
     const deleteResult = await itemsCollection.deleteMany({});
     console.log(`Deleted ${deleteResult.deletedCount} items`);
-    
+
     console.log('🌱 Inserting sample data...');
     const insertResult = await itemsCollection.insertMany(sampleData);
     console.log(`✅ Inserted ${insertResult.insertedCount} items`);
-    
+
     // 创建索引
     console.log('📊 Creating indexes...');
     await itemsCollection.createIndex({ type: 1 });
@@ -200,20 +200,20 @@ async function seedDatabase() {
     await itemsCollection.createIndex({ isFeatured: 1 });
     await itemsCollection.createIndex({ isHot: 1 });
     await itemsCollection.createIndex({ 'rating.averageScore': -1 });
-    
+
     // 验证
     const count = await itemsCollection.countDocuments({});
     console.log(`📊 Total items in database: ${count}`);
-    
+
     // 显示插入的数据
     console.log('\n📋 Sample of inserted items:');
     const items = await itemsCollection.find({}, { projection: { title: 1, type: 1, releaseYear: 1 } }).limit(5).toArray();
     items.forEach((item, index) => {
       console.log(`${index + 1}. ${item.title} (${item.type}, ${item.releaseYear})`);
     });
-    
+
     console.log('\n🎉 Database seeding completed successfully!');
-    
+
   } catch (error) {
     console.error('❌ Seeding error:', error);
     throw error;
@@ -228,8 +228,8 @@ if (require.main === module) {
   seedDatabase().catch(console.error);
 }
 
-<<<<<<< HEAD
+// <<<<<<< HEAD
 module.exports = { sampleData, seedDatabase };
-=======
-export { sampleData, seedDatabase };  
->>>>>>> origin/feature/reviews
+// =======
+// export { sampleData, seedDatabase };
+// >>>>>>> origin/feature/reviews
