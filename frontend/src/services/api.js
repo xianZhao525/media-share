@@ -38,22 +38,22 @@ export const itemAPI = {
   getItems(params = {}) {
     return api.get('/api/items', { params });
   },
-  
+
   // 获取热门内容
   getHotItems() {
     return api.get('/api/items/hot');
   },
-  
+
   // 获取内容详情
   getItem(id) {
     return api.get(`/api/items/${id}`);
   },
-  
+
   // 搜索内容
   searchItems(query) {
     return api.get('/api/items/search', { params: { q: query } });
   },
-  
+
   // 创建内容
   createItem(data) {
     return api.post('/api/items', data);

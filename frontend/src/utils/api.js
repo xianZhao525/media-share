@@ -110,7 +110,7 @@ export const http = {
 };
 
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 // 统一的请求函数
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
