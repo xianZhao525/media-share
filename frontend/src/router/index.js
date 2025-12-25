@@ -10,8 +10,10 @@ import ItemDetailView from '@/views/ItemDetailView.vue'
 import ItemEdit from '@/views/ItemEdit.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
-import ProfileView from '@/views/ProfileView.vue'
+// import ProfileView from '@/views/ProfileView.vue'
 import NotFound from '@/views/NotFound.vue'
+import ActivityFeed from '@/views/ActivityFeed.vue'
+import UserProfile from '@/views/UserProfile.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -73,6 +75,33 @@ const router = createRouter({
       }
     },
     {
+      path: '/activities',           // ✅ 新增路由
+      name: 'activities',
+      component: ActivityFeed,
+      meta: {
+        title: '动态流 - 影视分享平台',
+        requiresAuth: true          // 可选：需要登录才能访问
+      }
+    },
+    {
+      path: '/profile',  // ✅ 个人中心（替换为新组件）
+      name: 'profile',
+      component: UserProfile,
+      meta: {
+        title: '个人中心 - 媒体分享平台',
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/user/:id',  // ✅ 他人主页（替换为新组件）
+      name: 'user-profile',
+      component: UserProfile,
+      meta: {
+        title: '用户主页 - 媒体分享平台',
+        requiresAuth: false  // 查看他人可公开
+      }
+    },
+    {
       path: '/login',
       name: 'login',
       component: Login,
@@ -88,15 +117,6 @@ const router = createRouter({
       meta: {
         title: '注册 - 媒体分享平台',
         requiresAuth: false
-      }
-    },
-    {
-      path: '/profile',
-      name: 'profile',
-      component: ProfileView,
-      meta: {
-        title: '个人中心 - 媒体分享平台',
-        requiresAuth: true
       }
     },
     {

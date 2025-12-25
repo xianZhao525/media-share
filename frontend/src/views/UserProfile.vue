@@ -19,7 +19,7 @@
           <div class="tx-avatar-section">
             <div class="tx-avatar-container">
               <img 
-                :src="user.avatar || '/tx-default-avatar.png'" 
+                :src="user.avatar || '/images/1.jpg'" 
                 alt="avatar"
                 class="tx-profile-avatar"
               />

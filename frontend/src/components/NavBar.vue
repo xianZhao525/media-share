@@ -25,24 +25,33 @@
         <router-link to="/" class="nav-link">首页</router-link>
         <router-link to="/explore" class="nav-link">探索</router-link>
         <router-link to="/search" class="nav-link">搜索</router-link>
+
+        <!-- ✅ 新增：动态流入口 -->
+        <router-link to="/activities" class="nav-link" v-if="isAuthenticated">
+          <i>🌊</i> 动态
+        </router-link>
         
-        <!-- ✅ 整合的用户信息区域 -->
+        <!-- ✅ 登录状态区域 -->
         <template v-if="!isAuthenticated">
           <router-link to="/login" class="nav-link">登录</router-link>
           <router-link to="/register" class="nav-link">注册</router-link>
         </template>
         
-        <!-- ✅ 登录后显示用户头像和欢迎信息 -->
         <template v-else>
-          <div class="user-welcome">
+          <!-- ✅ 头像和欢迎文字（可点击跳转到个人中心） -->
+          <div class="user-profile-entry" @click="goToProfile">
             <img 
               :src="authStore.user?.avatar || '/default-avatar.png'" 
               alt="avatar" 
               class="user-avatar" 
             />
             <span class="welcome-text">欢迎，{{ authStore.user?.username }}</span>
-            <button @click="handleLogout" class="logout-btn">退出</button>
           </div>
+          
+          <!-- ✅ 明确的个人中心链接 -->
+          <router-link to="/profile" class="nav-link">个人中心</router-link>
+          
+          <button @click="handleLogout" class="logout-btn">退出</button>
         </template>
       </div>
     </div>
@@ -73,7 +82,6 @@ const authStore = useAuthStore()
 const searchKeyword = ref('')
 const popularTags = ref([])
 
-// ✅ 关键：使用计算属性实时获取登录状态
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 const fetchPopularTags = async () => {
@@ -89,15 +97,17 @@ const fetchPopularTags = async () => {
 
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
-    router.push({
-      path: '/search',
-      query: { q: searchKeyword.value }
-    })
+    router.push({ path: '/search', query: { q: searchKeyword.value } })
   }
 }
 
 const searchByTag = (tag) => {
   router.push({ path: '/search', query: { tag } })
+}
+
+// ✅ 跳转到个人中心
+const goToProfile = () => {
+  router.push('/profile')
 }
 
 const handleLogout = () => {
@@ -106,8 +116,8 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  fetchPopularTags()
-  authStore.checkAuth()  // 初始化检查登录状态
+  // fetchPopularTags()
+  authStore.checkAuth()
 })
 </script>
 
@@ -183,14 +193,21 @@ onMounted(() => {
   background: #007bff;
 }
 
-/* ✅ 新增用户欢迎区域样式 */
-.user-welcome {
+/* ✅ 用户入口样式 */
+.user-profile-entry {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0.5rem;
   border-radius: 8px;
   background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-profile-entry:hover {
+  background: #e9ecef;
+  transform: translateY(-1px);
 }
 
 .user-avatar {
@@ -204,6 +221,17 @@ onMounted(() => {
   color: #333;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* ✅ 个人中心链接样式 */
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-link i {
+  font-size: 16px;
 }
 
 .logout-btn {
