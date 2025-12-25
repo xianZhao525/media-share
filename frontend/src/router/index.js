@@ -1,6 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
+// 导入已经存在的文件（只有这两个是确定存在的）
+import HomeView from '@/views/HomeView.vue'
+import SearchResults from '@/views/SearchResults.vue'
+
+// 删除或注释掉下面所有不存在的导入！！！
+// import PlaceholderView from '@/views/PlaceholderView.vue'
+// import NavBar from '@/components/NavBar.vue'
+// import Login from '@/views/Login.vue'
+// import Register from '@/views/Register.vue'
+// import ItemCreate from '@/views/ItemCreate.vue'
+// import ActivityFeed from '@/views/ActivityFeed.vue'    // 这个文件不存在！
+// import UserProfile from '@/views/UserProfile.vue'     // 这个文件不存在！
+
+// 简单的占位组件
+const PlaceholderComponent = {
+  template: `
+    <div style="padding: 3rem; text-align: center; background: #f5f5f5; border-radius: 10px; margin: 2rem;">
+      <h2>{{ title || '功能页面' }}</h2>
+      <p>👨‍💻 由 <strong>{{ role || '对应角色' }}</strong> 负责开发</p>
+      <p>📅 预计完成时间：{{ eta || '开发中' }}</p>
+      <router-link to="/" style="color: #42b983;">🏠 返回首页</router-link>
+    </div>
+  `,
+  props: ['title', 'role', 'eta']
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [

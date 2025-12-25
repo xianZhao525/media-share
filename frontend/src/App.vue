@@ -1,31 +1,29 @@
 <template>
   <div id="app">
-    <!-- 顶部导航栏 -->
-    <nav class="navbar">
-      <div class="navbar-brand">
-        <router-link to="/" class="brand-link">影视探索</router-link>
-      </div>
-      <ul class="navbar-links">
-        <li>
-          <router-link to="/" class="nav-link">首页</router-link>
-        </li>
-        <li>
-          <router-link to="/explore" class="nav-link">探索</router-link>
-        </li>
-        <li>
-          <router-link to="/create" class="nav-link">创建内容</router-link>
-        </li>
-      </ul>
-    </nav>
-
+    <!-- 这是你负责的导航栏 -->
+    <NavBar />
+    
     <!-- 主内容区域 -->
-    <div class="main-content">
+    <main class="main-content">
       <router-view />
-    </div>
+    </main>
+    
+    <!-- 页脚（可以是你负责的全局样式部分） -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p>© 2024 在线影视分享平台 - 角色五（搜索与全局功能）开发</p>
+        <p class="footer-links">
+          <a href="/about">关于我们</a> | 
+          <a href="/help">帮助中心</a> | 
+          <a href="/contact">联系我们</a>
+        </p>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
+import NavBar from '@/components/NavBar.vue'
 import { onMounted } from 'vue';
 
 
@@ -36,53 +34,57 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 全局样式（你的职责之一） */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: #333;
-  color: white;
-}
-
-.navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.navbar-links {
-  list-style: none;
-  padding: 0;
-  display: flex;
-}
-
-.navbar-links li {
-  margin: 0 1rem;
-}
-
-.nav-link {
-  color: white;
-  text-decoration: none;
-  font-size: 1rem;
-}
-
-.nav-link:hover {
-  text-decoration: underline;
+  min-height: 100vh;
 }
 
 .main-content {
   flex: 1;
-  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1rem;
+}
+
+.app-footer {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 2rem 1rem;
+  text-align: center;
+  margin-top: auto;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-links {
+  margin-top: 0.5rem;
+}
+
+.footer-links a {
+  color: #007bff;
+  text-decoration: none;
+  margin: 0 0.5rem;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
 }
 </style>

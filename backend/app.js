@@ -9,6 +9,20 @@ import { networkInterfaces } from 'os';
 import { createRequire } from 'module';
 import itemRoutes from './routes/itemRoutes.js';
 
+
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { connectDB } from './db/connection.js';
+import searchRoutes from './routes/search.js';
+
+// 导入所有路由
+import authRoutes from './routes/auth.js';       // 角色一
+import itemRoutes from './routes/items.js';      // 角色二
+import reviewRoutes from './routes/reviews.js';  // 角色三
+import activityRoutes from './routes/activities.js'; // 角色四
+import searchRoutes from './routes/search.js';   // 角色五（你的）
+
 // ES 模块中获取 __dirname 的等价方式
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,9 +233,7 @@ process.on('SIGTERM', async () => {
 
 startServer();
 
-export default app;// backend/app.js - 完整可运行版本
 const express = require('express');
-const app = express();
 
 // 启用CORS（允许前端访问）
 app.use((req, res, next) => {
@@ -275,9 +287,6 @@ app.get('/api/activities', (req, res) => {
   });
 });
 
-// 启动服务器
-const PORT = 3001; // 固定使用3001端口
-
 const server = app.listen(PORT, '0.0.0.0', () => { // 监听所有地址
   console.log('='.repeat(50));
   console.log('✅ 服务器启动成功！');
@@ -314,3 +323,60 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+// import express from 'express';
+// import cors from 'cors';
+// import dotenv from 'dotenv';
+// import { connectDB } from './db/connection.js';
+// import searchRoutes from './routes/search.js';
+
+// // 导入所有路由
+// import authRoutes from './routes/auth.js';       // 角色一
+// import itemRoutes from './routes/items.js';      // 角色二
+// import reviewRoutes from './routes/reviews.js';  // 角色三
+// import activityRoutes from './routes/activities.js'; // 角色四
+// import searchRoutes from './routes/search.js';   // 角色五（你的）
+
+// dotenv.config();
+
+// const app = express();
+// const PORT = process.env.PORT || 3000;
+
+// // 中间件
+// app.use(cors());
+// app.use(express.json());
+
+// // API路由
+// app.use('/api/auth', authRoutes);
+// app.use('/api/items', itemRoutes);
+// app.use('/api', reviewRoutes);
+// app.use('/api', activityRoutes);
+// // app.use('/api', searchRoutes); 
+// app.use('/api/search', searchRoutes);
+
+// // 健康检查
+// app.get('/health', (req, res) => {
+//   res.json({ status: 'ok' });
+// });
+
+// // 错误处理
+// app.use((err, req, res, next) => {
+//   console.error(err.stack);
+//   res.status(500).json({
+//     code: 500,
+//     data: null,
+//     message: '服务器内部错误'
+//   });
+// });
+
+// // 启动服务器
+// connectDB()
+//   .then(() => {
+//     app.listen(PORT, () => {
+//       console.log(`🚀 服务器运行在 http://localhost:${PORT}`);
+//     });
+//   })
+//   .catch(err => {
+//     console.error('数据库连接失败:', err);
+//   });
+
+export default app;

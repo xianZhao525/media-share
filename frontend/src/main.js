@@ -11,6 +11,12 @@ const pinia = createPinia()
 app.use(pinia)
 
 // 使用路由
+if (process.env.NODE_ENV === 'development') {
+    const meta = document.createElement('meta');
+    meta.httpEquiv = "Content-Security-Policy";
+    meta.content = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;";
+    document.head.appendChild(meta);
+}
 app.use(router)
 
 // 挂载应用
