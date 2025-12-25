@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f23;
+      color: white;
+      font-family: Arial;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>测试角色四的组件</h1>
+    <div style="display: flex; gap: 20px;">
+      <div style="flex: 1;">
+        <h2>ProfileView组件：</h2>
+        <div id="profile-view"></div>
+      </div>
+      <div style="flex: 1;">
+        <h2>UserProfile组件：</h2>
+        <div id="user-profile"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 引入Vue和你的组件 -->
+ <script type="module">
+  // 假设 test.html 在根目录，views 在 src/views
+  import ProfileView from './src/views/ProfileView.vue'
+  import UserProfile from './src/views/UserProfile.vue'
+</script>
+</body>
+</html>
