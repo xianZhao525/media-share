@@ -1,6 +1,7 @@
 <!-- frontend/src/views/HomeView.vue -->
 <template>
   <div class="home-view">
+    
     <!-- 顶部轮播图 -->
     <section class="hero-section">
       <div class="hero-container">
@@ -270,11 +271,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+// import { ref, onMounted } from 'vue'
+// import { useRouter } from 'vue-router'
+// import itemApi from '@/api/items'
+
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import itemApi from '@/api/items'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+// 检查登录状态
+const isLoggedIn = computed(() => !!authStore.token)
+const userAvatar = computed(() => authStore.user?.avatar || '')
+const username = computed(() => authStore.user?.username || '')
 
 // 响应式数据
 const featuredItems = ref([])

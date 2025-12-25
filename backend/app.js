@@ -16,9 +16,9 @@ const __dirname = path.dirname(__filename);
 // 创建 require 函数
 const require = createRequire(import.meta.url);
 
-// 使用 require 导入 CommonJS 模块
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
+// 使用 import 导入 ES Module
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
 
 dotenv.config();
 
@@ -33,7 +33,7 @@ try {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // 中间件
 app.use(helmet());
