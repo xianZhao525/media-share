@@ -1,16 +1,19 @@
-// backend/routes/auth.js
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { getDB } from '../db/connection.js';
+import { ObjectId } from 'mongodb';
+
+// 导入认证中间件（已修复为 ES Module）
 import authenticateToken from '../middleware/auth.js';
 
 const router = express.Router();
 
-// 用户注册 - 修改为统一响应格式
+// 用户注册 - 使用 MongoDB 原生驱动
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
+    const db = getDB();
 
     // 验证输入
     if (!username || !email || !password) {
@@ -22,7 +25,7 @@ router.post('/register', async (req, res) => {
     }
 
     // 检查用户是否已存在
-    const existingUser = await User.findOne({
+    const existingUser = await db.collection('users').findOne({
       $or: [{ email }, { username }]
     });
 
@@ -38,40 +41,65 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 创建新用户
-    const newUser = new User({
+    // 创建新用户文档
+    const newUserDoc = {
       username,
       email,
       password: hashedPassword,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
-      createdAt: new Date()
-    });
+      following: [],
+      followers: [],
+      favorites: [],
+      history: [],
+      social: {},
+      preferences: {
+        theme: 'light',
+        language: 'zh-CN',
+        notificationEnabled: true
+      },
+      stats: {
+        itemsCount: 0,
+        reviewsCount: 0,
+        followersCount: 0,
+        followingCount: 0
+      },
+      role: 'user',
+      status: 'active',
+      emailVerified: false,
+      lastLogin: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    // 保存用户到数据库
-    const savedUser = await newUser.save();
+    // 插入用户到数据库
+    const result = await db.collection('users').insertOne(newUserDoc);
+
+    if (!result.insertedId) {
+      throw new Error('用户创建失败');
+    }
 
     // 生成JWT令牌
     const token = jwt.sign(
       {
-        userId: savedUser._id,
-        username: savedUser.username,
-        email: savedUser.email
+        userId: result.insertedId.toString(),
+        username: newUserDoc.username,
+        email: newUserDoc.email
       },
       process.env.JWT_SECRET || 'your-secret-key-change-this',
       { expiresIn: '7d' }
     );
 
-    // 返回用户信息和令牌（不返回密码）
+    // 返回用户信息和令牌（不包含密码）
     res.status(201).json({
       code: 201,
       message: '注册成功',
       data: {
         user: {
-          id: savedUser._id,
-          username: savedUser.username,
-          email: savedUser.email,
-          avatar: savedUser.avatar,
-          createdAt: savedUser.createdAt
+          id: result.insertedId.toString(),
+          username: newUserDoc.username,
+          email: newUserDoc.email,
+          avatar: newUserDoc.avatar,
+          createdAt: newUserDoc.createdAt
         },
         token
       }
@@ -87,10 +115,11 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 用户登录 - 修改为统一响应格式
+// 用户登录 - 使用 MongoDB 原生驱动
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const db = getDB();
 
     // 验证输入
     if (!email || !password) {
@@ -102,7 +131,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 查找用户
-    const user = await User.findOne({ email });
+    const user = await db.collection('users').findOne({ email });
     if (!user) {
       return res.status(401).json({
         code: 401,
@@ -122,13 +151,15 @@ router.post('/login', async (req, res) => {
     }
 
     // 更新最后登录时间
-    user.lastLogin = new Date();
-    await user.save();
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
 
     // 生成JWT令牌
     const token = jwt.sign(
       {
-        userId: user._id,
+        userId: user._id.toString(),
         username: user.username,
         email: user.email
       },
@@ -142,11 +173,11 @@ router.post('/login', async (req, res) => {
       message: '登录成功',
       data: {
         user: {
-          id: user._id,
+          id: user._id.toString(),
           username: user.username,
           email: user.email,
           avatar: user.avatar,
-          bio: user.bio,
+          bio: user.bio || '',
           createdAt: user.createdAt
         },
         token
@@ -163,10 +194,14 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 获取当前用户信息 - 修改为统一响应格式
+// 获取当前用户信息
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const db = getDB();
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.user.userId) },
+      { projection: { password: 0 } } // 排除密码字段
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -191,8 +226,5 @@ router.get('/me', authenticateToken, async (req, res) => {
     });
   }
 });
-
-// 保留其他路由，但确保响应格式一致
-// 修改密码、更新信息等路由...
 
 export default router;

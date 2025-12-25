@@ -278,10 +278,14 @@ import { ref, onMounted, computed, watch } from 'vue'  // 添加 watch 导入
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import FollowButton from './FollowButton.vue'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const userId = route.params.id
+const userId = computed(() => {
+  return route.params.id || authStore.userId || 'me'
+})
 
 // 响应式数据
 const user = ref({
@@ -328,18 +332,19 @@ const tabs = [
   { id: 'about', label: '关于', icon: 'icon-info' }
 ]
 
-// 加载用户数据
 const loadUserData = async () => {
   try {
-    const endpoint = userId ? `/api/users/${userId}` : '/api/users/me'
+    const endpoint = userId.value && userId.value !== 'me' 
+      ? `/api/users/${userId.value}` 
+      : '/api/users/me'
+    
     const response = await axios.get(endpoint)
     user.value = response.data.user
-    editForm.value = {
-      username: user.value.username,
-      bio: user.value.bio
-    }
   } catch (error) {
     console.error('加载用户数据失败:', error)
+    if (error.response?.status === 401) {
+      router.push('/login')
+    }
   }
 }
 
@@ -510,8 +515,13 @@ watch(activeTab, (newTab) => {
   }
 })
 
-// 初始化加载
 onMounted(() => {
+  // 如果访问自己的页面且未登录，跳转到登录
+  if (!route.params.id && !authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
   loadUserData()
   loadStats()
   loadActivities()

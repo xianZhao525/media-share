@@ -6,7 +6,7 @@
         🎬 影视分享
       </router-link>
       
-      <!-- 中间搜索框（你的核心功能） -->
+      <!-- 中间搜索框 -->
       <div class="nav-search">
         <input 
           v-model="searchKeyword"
@@ -25,13 +25,24 @@
         <router-link to="/" class="nav-link">首页</router-link>
         <router-link to="/explore" class="nav-link">探索</router-link>
         <router-link to="/search" class="nav-link">搜索</router-link>
+        
+        <!-- ✅ 整合的用户信息区域 -->
         <template v-if="!isAuthenticated">
           <router-link to="/login" class="nav-link">登录</router-link>
           <router-link to="/register" class="nav-link">注册</router-link>
         </template>
+        
+        <!-- ✅ 登录后显示用户头像和欢迎信息 -->
         <template v-else>
-          <router-link to="/profile" class="nav-link">个人中心</router-link>
-          <button @click="handleLogout" class="logout-btn">退出</button>
+          <div class="user-welcome">
+            <img 
+              :src="authStore.user?.avatar || '/default-avatar.png'" 
+              alt="avatar" 
+              class="user-avatar" 
+            />
+            <span class="welcome-text">欢迎，{{ authStore.user?.username }}</span>
+            <button @click="handleLogout" class="logout-btn">退出</button>
+          </div>
         </template>
       </div>
     </div>
@@ -52,18 +63,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const searchKeyword = ref('')
 const popularTags = ref([])
 
-// 获取热门标签（你的API）
+// ✅ 关键：使用计算属性实时获取登录状态
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+
 const fetchPopularTags = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/tags/popular')
+    const response = await axios.get('/api/tags/popular') 
     if (response.data.code === 200) {
       popularTags.value = response.data.data
     }
@@ -72,7 +87,6 @@ const fetchPopularTags = async () => {
   }
 }
 
-// 搜索功能
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
     router.push({
@@ -82,25 +96,18 @@ const handleSearch = () => {
   }
 }
 
-// 通过标签搜索
 const searchByTag = (tag) => {
-  router.push({
-    path: '/search',
-    query: { tag }
-  })
+  router.push({ path: '/search', query: { tag } })
 }
 
-// 退出登录（模拟）
 const handleLogout = () => {
-  console.log('退出登录')
-  // 实际开发中调用退出API
+  authStore.logout()
+  router.push('/')
 }
-
-// 假设的认证状态
-const isAuthenticated = ref(false)
 
 onMounted(() => {
   fetchPopularTags()
+  authStore.checkAuth()  // 初始化检查登录状态
 })
 </script>
 
@@ -176,12 +183,41 @@ onMounted(() => {
   background: #007bff;
 }
 
-.logout-btn {
+/* ✅ 新增用户欢迎区域样式 */
+.user-welcome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.5rem;
+  border-radius: 8px;
   background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.welcome-text {
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 12px;
+}
+
+.logout-btn:hover {
+  background: #c82333;
 }
 
 .tags-bar {
@@ -205,7 +241,6 @@ onMounted(() => {
   border-radius: 12px;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.3s;
 }
 
 .tag-item:hover {

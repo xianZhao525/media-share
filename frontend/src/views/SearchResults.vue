@@ -121,142 +121,146 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-// import { searchAPI } from '@/api/search';
+  import { ref, computed, watch, onMounted } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import axios from 'axios';
 
-const route = useRoute();
-const router = useRouter();
+  const route = useRoute();
+  const router = useRouter();
 
-// 响应式数据
-const searchQuery = ref('');
-const selectedType = ref('');
-const sortBy = ref('relevance');
-const results = ref([]);
-const total = ref(0);
-const currentPage = ref(1);
-const limit = ref(12);
-const loading = ref(false);
+  // 响应式数据
+  const searchQuery = ref('');
+  const selectedType = ref('');
+  const sortBy = ref('relevance');
+  const results = ref([]);
+  const total = ref(0);
+  const currentPage = ref(1);
+  const limit = ref(12);
+  const loading = ref(false);
 
-// 内容类型
-const contentTypes = [
-  { value: 'movie', label: '电影', icon: '🎬' },
-  { value: 'book', label: '书籍', icon: '📚' },
-  { value: 'music', label: '音乐', icon: '🎵' }
-];
+  // 内容类型
+  const contentTypes = [
+    { value: 'movie', label: '电影', icon: '🎬' },
+    { value: 'book', label: '书籍', icon: '📚' },
+    { value: 'music', label: '音乐', icon: '🎵' }
+  ];
 
-// 计算属性
-const totalPages = computed(() => Math.ceil(total.value / limit.value));
-const visiblePages = computed(() => {
-  const pages = [];
-  const range = 2;
-  let start = Math.max(1, currentPage.value - range);
-  let end = Math.min(totalPages.value, currentPage.value + range);
-  
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-  return pages;
-});
-
-// 监听路由变化
-watch(() => route.query, (query) => {
-  loadFromQuery(query);
-  performSearch();
-}, { immediate: true });
-
-// 从路由加载参数
-const loadFromQuery = (query) => {
-  searchQuery.value = query.q || '';
-  selectedType.value = query.type || '';
-  sortBy.value = query.sort || 'relevance';
-  currentPage.value = parseInt(query.page) || 1;
-};
-
-// 执行搜索
-const performSearch = async () => {
-  loading.value = true;
-  
-  try {
-    const params = {
-      q: searchQuery.value,
-      type: selectedType.value,
-      page: currentPage.value,
-      limit: limit.value
-    };
+  // 计算属性
+  const totalPages = computed(() => Math.ceil(total.value / limit.value));
+  const visiblePages = computed(() => {
+    const pages = [];
+    const range = 2;
+    let start = Math.max(1, currentPage.value - range);
+    let end = Math.min(totalPages.value, currentPage.value + range);
     
-    const response = await searchAPI.search(params);
-    
-    if (response.code === 200) {
-      results.value = response.data.results;
-      total.value = response.data.total;
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
     }
-  } catch (error) {
-    console.error('搜索失败:', error);
-    results.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 切换类型筛选
-const toggleType = (type) => {
-  selectedType.value = selectedType.value === type ? '' : type;
-  currentPage.value = 1;
-  updateURL();
-};
-
-// 应用筛选
-const applyFilters = () => {
-  currentPage.value = 1;
-  updateURL();
-};
-
-// 更新URL
-const updateURL = () => {
-  const query = {};
-  
-  if (searchQuery.value) query.q = searchQuery.value;
-  if (selectedType.value) query.type = selectedType.value;
-  if (sortBy.value !== 'relevance') query.sort = sortBy.value;
-  if (currentPage.value > 1) query.page = currentPage.value;
-  
-  router.push({ path: '/search', query });
-};
-
-// 分页导航
-const goToPage = (page) => {
-  currentPage.value = page;
-  updateURL();
-};
-
-// 查看详情
-const viewItem = (id) => {
-  router.push(`/items/${id}`);
-};
-
-// 按标签搜索
-const searchByTag = (tag) => {
-  router.push({
-    path: '/search',
-    query: { tag }
+    return pages;
   });
-};
 
-// 工具函数
-const truncateText = (text, maxLength) => {
-  if (!text) return '';
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-};
+  // 工具函数
+  const truncateText = (text, maxLength) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
 
-const getTypeIcon = (type) => {
-  const icons = { movie: '🎬', book: '📚', music: '🎵' };
-  return icons[type] || '📄';
-};
+  const getTypeIcon = (type) => {
+    const icons = { movie: '🎬', book: '📚', music: '🎵' };
+    return icons[type] || '📄';
+  };
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('zh-CN');
-};
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('zh-CN');
+  };
+
+  // 从路由加载参数
+  const loadFromQuery = (query) => {
+    searchQuery.value = query.q || '';
+    selectedType.value = query.type || '';
+    sortBy.value = query.sort || 'relevance';
+    currentPage.value = parseInt(query.page) || 1;
+  };
+
+  // 执行搜索
+  const performSearch = async () => {
+    loading.value = true;
+    
+    try {
+      const params = {
+        q: searchQuery.value,
+        type: selectedType.value,
+        page: currentPage.value,
+        limit: limit.value
+      };
+      
+      const response = await axios.get('/api/search', { params });
+      
+      if (response.data.code === 200) {
+        results.value = response.data.data.results;
+        total.value = response.data.data.total;
+      }
+    } catch (error) {
+      console.error('搜索失败:', error);
+      results.value = [];
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 切换类型筛选
+  const toggleType = (type) => {
+    selectedType.value = selectedType.value === type ? '' : type;
+    currentPage.value = 1;
+    updateURL();
+  };
+
+  // 应用筛选
+  const applyFilters = () => {
+    currentPage.value = 1;
+    updateURL();
+  };
+
+  // 更新URL
+  const updateURL = () => {
+    const query = {};
+    
+    if (searchQuery.value) query.q = searchQuery.value;
+    if (selectedType.value) query.type = selectedType.value;
+    if (sortBy.value !== 'relevance') query.sort = sortBy.value;
+    if (currentPage.value > 1) query.page = currentPage.value;
+    
+    router.push({ path: '/search', query });
+  };
+
+  // 分页导航
+  const goToPage = (page) => {
+    currentPage.value = page;
+    updateURL();
+  };
+
+  // 查看详情
+  const viewItem = (id) => {
+    router.push(`/items/${id}`);
+  };
+
+  // 按标签搜索
+  const searchByTag = (tag) => {
+    router.push({
+      path: '/search',
+      query: { tag }
+    });
+  };
+
+  // 监听路由变化
+  watch(() => route.query, (query) => {
+    loadFromQuery(query);
+    performSearch();
+  }, { immediate: true });
+
+  onMounted(() => {
+    // 初始加载已经在 watch 中处理
+  });
 </script>
 
 <style scoped>

@@ -56,10 +56,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+
+import { ref, onMounted } from 'vue'  
 import { useRouter } from 'vue-router'
-import { login } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import { login } from '@/api/auth' 
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -86,10 +87,13 @@ const handleLogin = async () => {
   try {
     const response = await login(formData.value)
     
-    if (response.code === 200) {
-      // 保存用户信息和token到store
-      authStore.setUser(response.data.user)
-      authStore.setToken(response.data.token)
+    console.log('✅ 登录响应:', response);  // 调试用
+
+    // ✅ 正确访问 response.data.code 和 response.data.data
+    if (response.data.code === 200) {
+      // ✅ 保存用户信息和token到store
+      authStore.setUser(response.data.data.user)      // ← 加 .data
+      authStore.setToken(response.data.data.token)    // ← 加 .data
       
       // 如果选择记住我，保存到localStorage
       if (rememberMe.value) {
@@ -99,10 +103,17 @@ const handleLogin = async () => {
       // 跳转到首页
       router.push('/')
     } else {
-      errorMessage.value = response.message || '登录失败'
+      errorMessage.value = response.data.message || '登录失败'
     }
   } catch (error) {
-    errorMessage.value = error.message || '网络错误，请稍后重试'
+    // ✅ 显示后端真实错误
+    console.error('❌ 登录错误详情:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.response?.data?.message || error.message
+    });
+    
+    errorMessage.value = error.response?.data?.message || error.message || '网络错误，请稍后重试'
   } finally {
     loading.value = false
   }

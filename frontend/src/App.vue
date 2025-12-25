@@ -11,7 +11,7 @@
     <!-- 页脚（可以是你负责的全局样式部分） -->
     <footer class="app-footer">
       <div class="footer-content">
-        <p>© 2024 在线影视分享平台 - 角色五（搜索与全局功能）开发</p>
+        <p>© 2025 在线影视分享平台 - 角色五（搜索与全局功能）开发</p>
         <p class="footer-links">
           <a href="/about">关于我们</a> | 
           <a href="/help">帮助中心</a> | 
@@ -35,7 +35,7 @@ onMounted(() => {
 
 <style scoped>
 /* 全局样式（你的职责之一） */
-* {
+/* * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -59,7 +59,7 @@ body {
   margin: 0 auto;
   width: 100%;
   padding: 1rem;
-}
+} */
 
 .app-footer {
   background: #f8f9fa;

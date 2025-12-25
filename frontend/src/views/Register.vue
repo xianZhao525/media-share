@@ -148,6 +148,13 @@ const handleRegister = async () => {
   loading.value = true
   errorMessage.value = ''
 
+  // ✅ 调试：打印即将发送的数据
+  console.log('📤 发送的数据:', {
+    username: formData.value.username,
+    email: formData.value.email,
+    password: formData.value.password
+  });
+
   try {
     const response = await register({
       username: formData.value.username,
@@ -155,18 +162,29 @@ const handleRegister = async () => {
       password: formData.value.password
     })
     
-    if (response.code === 200) {
+    console.log('✅ 注册响应:', response);
+
+    // ✅ 正确访问 response.data.code 和 response.data.message
+    if (response.data.code === 200 || response.data.code === 201) {
       successMessage.value = '注册成功！3秒后跳转到登录页面...'
+      errorMessage.value = ''  // 清空错误信息
       
       // 3秒后跳转到登录页面
       setTimeout(() => {
         router.push('/login')
       }, 3000)
     } else {
-      errorMessage.value = response.message || '注册失败'
+      errorMessage.value = response.data.message || '注册失败'
     }
   } catch (error) {
-    errorMessage.value = error.message || '网络错误，请稍后重试'
+    // ✅ catch 块中也使用 response.data.message
+    console.error('❌ 错误详情:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.response?.data?.message || error.message
+    });
+    
+    errorMessage.value = error.response?.data?.message || '网络错误，请稍后重试'
   } finally {
     loading.value = false
   }

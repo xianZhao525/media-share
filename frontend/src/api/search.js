@@ -1,10 +1,10 @@
-@'
-    /**
-     * 搜索功能API（角色五负责）
-     * 与后端 /api/search 接口对应
-     */
+// @'
+//     /**
+//      * 搜索功能API（角色五负责）
+//      * 与后端 /api/search 接口对应
+//      */
 
-    import axios from 'axios'
+import axios from 'axios'
 
 const API_BASE = 'http://localhost:3000/api'
 
@@ -85,4 +85,4 @@ export const searchAPI = {
 }
 
 export default searchAPI
-'@ | Out-File -FilePath frontend\src\api\search.js -Encoding UTF8
+// '@ | Out-File -FilePath frontend\src\api\search.js -Encoding UTF8
