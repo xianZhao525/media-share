@@ -435,7 +435,7 @@ const router = useRouter()
 // 响应式数据
 const searchQuery = ref('')
 const items = ref([])
-const searchResults = ref([])
+const searchResults = ref([])  // 存储搜索结果，与items分离
 const popularTags = ref([])
 const loading = ref(false)
 
@@ -586,21 +586,41 @@ const filterByTag = (tag) => {
   }
 }
 
-// 筛选控制
-const performSearch = () => {
-  if (searchQuery.value.trim()) {
-    currentPage.value = 1
-    loadSearchResults()
-  } else {
-    loadItems()
+// ===================================================================
+// 关键修复：搜索功能
+// ===================================================================
+// 执行搜索（当用户点击搜索按钮或按回车时调用）
+const performSearch = async () => {
+  const query = searchQuery.value.trim()
+  if (!query) {
+    // 如果搜索框为空，则清除搜索状态
+    clearSearch()
+    return
+  }
+  
+  loading.value = true
+  currentPage.value = 1
+  searchResults.value = []
+  
+  try {
+    await loadSearchResults()
+  } catch (error) {
+    console.error('搜索失败:', error)
+    items.value = []
+    totalItems.value = 0
+  } finally {
+    loading.value = false
   }
 }
 
+// 清除搜索，回到普通浏览模式
 const clearSearch = () => {
   searchQuery.value = ''
   searchResults.value = []
+  currentPage.value = 1
   loadItems()
 }
+// ===================================================================
 
 const toggleAdvancedFilters = () => {
   showAdvancedFilters.value = !showAdvancedFilters.value
@@ -635,24 +655,33 @@ const resetFilters = () => {
   loadItems()
 }
 
-// 分页控制
+// ===================================================================
+// 关键修复：分页逻辑需要区分搜索模式和普通浏览模式
+// ===================================================================
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return
   currentPage.value = page
+  
+  // 根据当前模式加载数据
   if (searchQuery.value.trim()) {
-    loadSearchResults()
+    loadSearchResults()  // 搜索模式
   } else {
-    loadItems()
+    loadItems()  // 普通浏览模式
   }
+  
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const handlePageSizeChange = () => {
   currentPage.value = 1
-  loadItems()
+  if (searchQuery.value.trim()) {
+    loadSearchResults()
+  } else {
+    loadItems()
+  }
 }
+// ===================================================================
 
-// 交互函数
 const viewItemDetail = (itemId) => {
   router.push(`/item/${itemId}`)
 }
@@ -675,7 +704,9 @@ const shareItem = (item) => {
   // 这里可以添加分享逻辑
 }
 
-// 数据加载
+// ===================================================================
+// 数据加载函数
+// ===================================================================
 const loadItems = async () => {
   try {
     loading.value = true
@@ -691,7 +722,7 @@ const loadItems = async () => {
     
     // 处理标签筛选
     if (selectedTags.value.length > 0) {
-      params.tag = selectedTags.value[0] // 当前只支持单个标签筛选
+      params.tag = selectedTags.value[0]
     }
     
     // 处理高级筛选
@@ -709,11 +740,14 @@ const loadItems = async () => {
     
   } catch (error) {
     console.error('加载内容失败:', error)
+    items.value = []
+    totalItems.value = 0
   } finally {
     loading.value = false
   }
 }
 
+// 加载搜索结果（核心修复：使用独立的searchAPI）
 const loadSearchResults = async () => {
   try {
     loading.value = true
@@ -721,23 +755,27 @@ const loadSearchResults = async () => {
     const res = await itemApi.searchItems(searchQuery.value, {
       page: currentPage.value,
       limit: pageSize.value,
-      type: filters.value.type,
-      minRating: filters.value.minRating
+      type: filters.value.type || undefined,
+      tag: advancedFilters.value.tags[0] || selectedTags.value[0] || undefined
     })
     
     if (res.code === 200) {
-      searchResults.value = res.data.items || []
-      items.value = searchResults.value
-      totalItems.value = res.data.pagination?.total || items.value.length
-      totalPages.value = res.data.pagination?.totalPages || 1
+      // 注意：搜索结果的数据结构可能不同，需要适配
+      const searchData = res.data.results || res.data.items || []
+      items.value = searchData
+      totalItems.value = res.data.total || res.data.pagination?.total || 0
+      totalPages.value = res.data.pages || res.data.pagination?.totalPages || 1
     }
     
   } catch (error) {
     console.error('搜索失败:', error)
+    items.value = []
+    totalItems.value = 0
   } finally {
     loading.value = false
   }
 }
+// ===================================================================
 
 const loadPopularTags = async () => {
   try {
@@ -752,29 +790,46 @@ const loadPopularTags = async () => {
   }
 }
 
-// 初始化
+// ===================================================================
+// 初始化逻辑
+// ===================================================================
 const initFromRoute = () => {
-  const { type, tag, sort, rating } = route.query
+  const { type, tag, sort, rating, q } = route.query
   
   if (type) filters.value.type = type
   if (tag) selectedTags.value = [tag]
   if (sort) filters.value.sortBy = sort
   if (rating) filters.value.minRating = parseFloat(rating)
+  if (q) searchQuery.value = q  // 支持URL中的搜索参数
   
-  loadItems()
+  // 如果有搜索参数，执行搜索；否则加载普通列表
+  if (q && q.trim()) {
+    performSearch()
+  } else {
+    loadItems()
+  }
 }
 
-// 监听
-watch(() => route.query, () => {
+// 监听路由变化
+watch(() => route.query, (newQuery) => {
   initFromRoute()
 })
 
-watch([() => filters.value.type, () => filters.value.sortBy, () => filters.value.minRating], () => {
+// 监听筛选条件变化（修复：搜索状态下也应用筛选）
+watch([
+  () => filters.value.type, 
+  () => filters.value.sortBy, 
+  () => filters.value.minRating
+], () => {
   currentPage.value = 1
-  loadItems()
+  if (searchQuery.value.trim()) {
+    loadSearchResults()  // 如果处于搜索状态，重新搜索
+  } else {
+    loadItems()
+  }
 })
 
-// 生命周期
+// 生命周期钩子
 onMounted(() => {
   initFromRoute()
   loadPopularTags()

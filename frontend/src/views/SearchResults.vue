@@ -120,147 +120,168 @@
   </div>
 </template>
 
+// frontend/src/views/SearchResults.vue
 <script setup>
-  import { ref, computed, watch, onMounted } from 'vue';
-  import { useRoute, useRouter } from 'vue-router';
-  import axios from 'axios';
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
-  const route = useRoute();
-  const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
-  // 响应式数据
-  const searchQuery = ref('');
-  const selectedType = ref('');
-  const sortBy = ref('relevance');
-  const results = ref([]);
-  const total = ref(0);
-  const currentPage = ref(1);
-  const limit = ref(12);
-  const loading = ref(false);
+// 响应式数据
+const searchQuery = ref('')
+const selectedType = ref('')
+const sortBy = ref('relevance')
+const results = ref([])
+const total = ref(0)
+const currentPage = ref(1)
+const limit = ref(12)
+const loading = ref(false)
 
-  // 内容类型
-  const contentTypes = [
-    { value: 'movie', label: '电影', icon: '🎬' },
-    { value: 'book', label: '书籍', icon: '📚' },
-    { value: 'music', label: '音乐', icon: '🎵' }
-  ];
+// 内容类型
+const contentTypes = [
+  { value: 'movie', label: '电影', icon: '🎬' },
+  { value: 'tv', label: '电视剧', icon: '📺' },
+  { value: 'anime', label: '动漫', icon: '🎌' },
+  { value: 'variety', label: '综艺', icon: '🎭' },
+  { value: 'documentary', label: '纪录片', icon: '🎥' }
+]
 
-  // 计算属性
-  const totalPages = computed(() => Math.ceil(total.value / limit.value));
-  const visiblePages = computed(() => {
-    const pages = [];
-    const range = 2;
-    let start = Math.max(1, currentPage.value - range);
-    let end = Math.min(totalPages.value, currentPage.value + range);
-    
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
+// 计算属性
+const totalPages = computed(() => Math.ceil(total.value / limit.value))
+
+const visiblePages = computed(() => {
+  const pages = []
+  const range = 2
+  const start = Math.max(1, currentPage.value - range)
+  const end = Math.min(totalPages.value, currentPage.value + range)
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  return pages
+})
+
+// 工具函数
+const truncateText = (text, maxLength) => {
+  if (!text) return ''
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+}
+
+const getTypeIcon = (type) => {
+  const icons = { 
+    movie: '🎬', 
+    tv: '📺', 
+    anime: '🎌', 
+    variety: '🎭', 
+    documentary: '🎥' 
+  }
+  return icons[type] || '📄'
+}
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('zh-CN')
+}
+
+// 执行搜索
+const performSearch = async () => {
+  loading.value = true
+  
+  try {
+    const params = {
+      q: searchQuery.value,
+      type: selectedType.value || undefined,
+      page: currentPage.value,
+      limit: limit.value,
+      sort: sortBy.value !== 'relevance' ? sortBy.value : undefined
     }
-    return pages;
-  });
-
-  // 工具函数
-  const truncateText = (text, maxLength) => {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  };
-
-  const getTypeIcon = (type) => {
-    const icons = { movie: '🎬', book: '📚', music: '🎵' };
-    return icons[type] || '📄';
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('zh-CN');
-  };
-
-  // 从路由加载参数
-  const loadFromQuery = (query) => {
-    searchQuery.value = query.q || '';
-    selectedType.value = query.type || '';
-    sortBy.value = query.sort || 'relevance';
-    currentPage.value = parseInt(query.page) || 1;
-  };
-
-  // 执行搜索
-  const performSearch = async () => {
-    loading.value = true;
     
-    try {
-      const params = {
-        q: searchQuery.value,
-        type: selectedType.value,
-        page: currentPage.value,
-        limit: limit.value
-      };
-      
-      const response = await axios.get('/api/search', { params });
-      
-      if (response.data.code === 200) {
-        results.value = response.data.data.results;
-        total.value = response.data.data.total;
-      }
-    } catch (error) {
-      console.error('搜索失败:', error);
-      results.value = [];
-    } finally {
-      loading.value = false;
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (!params[key]) delete params[key]
+    })
+    
+    const response = await axios.get('/api/search', { params })
+    
+    if (response.data.code === 200) {
+      results.value = response.data.data.results || []
+      total.value = response.data.data.total || 0
     }
-  };
+  } catch (error) {
+    console.error('搜索失败:', error)
+    results.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
 
-  // 切换类型筛选
-  const toggleType = (type) => {
-    selectedType.value = selectedType.value === type ? '' : type;
-    currentPage.value = 1;
-    updateURL();
-  };
+// 切换类型筛选
+const toggleType = (type) => {
+  selectedType.value = selectedType.value === type ? '' : type
+  currentPage.value = 1
+  updateURL()
+}
 
-  // 应用筛选
-  const applyFilters = () => {
-    currentPage.value = 1;
-    updateURL();
-  };
+// 应用筛选
+const applyFilters = () => {
+  currentPage.value = 1
+  updateURL()
+}
 
-  // 更新URL
-  const updateURL = () => {
-    const query = {};
-    
-    if (searchQuery.value) query.q = searchQuery.value;
-    if (selectedType.value) query.type = selectedType.value;
-    if (sortBy.value !== 'relevance') query.sort = sortBy.value;
-    if (currentPage.value > 1) query.page = currentPage.value;
-    
-    router.push({ path: '/search', query });
-  };
+// 更新URL
+const updateURL = () => {
+  const query = {}
+  
+  if (searchQuery.value) query.q = searchQuery.value
+  if (selectedType.value) query.type = selectedType.value
+  if (sortBy.value !== 'relevance') query.sort = sortBy.value
+  if (currentPage.value > 1) query.page = currentPage.value
+  
+  router.push({ path: '/search', query })
+}
 
-  // 分页导航
-  const goToPage = (page) => {
-    currentPage.value = page;
-    updateURL();
-  };
+// 分页导航
+const goToPage = (page) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  updateURL()
+}
 
-  // 查看详情
-  const viewItem = (id) => {
-    router.push(`/items/${id}`);
-  };
+// 查看详情
+const viewItem = (id) => {
+  router.push(`/item/${id}`)
+}
 
-  // 按标签搜索
-  const searchByTag = (tag) => {
-    router.push({
-      path: '/search',
-      query: { tag }
-    });
-  };
+// 按标签搜索
+const searchByTag = (tag) => {
+  searchQuery.value = tag
+  selectedType.value = ''
+  currentPage.value = 1
+  updateURL()
+}
 
-  // 监听路由变化
-  watch(() => route.query, (query) => {
-    loadFromQuery(query);
-    performSearch();
-  }, { immediate: true });
+// 从路由加载参数
+const loadFromQuery = (query) => {
+  searchQuery.value = query.q || ''
+  selectedType.value = query.type || ''
+  sortBy.value = query.sort || 'relevance'
+  currentPage.value = parseInt(query.page) || 1
+}
 
-  onMounted(() => {
-    // 初始加载已经在 watch 中处理
-  });
+// 监听路由变化
+watch(() => route.query, (query) => {
+  loadFromQuery(query)
+  performSearch()
+}, { immediate: true })
+
+onMounted(() => {
+  loadFromQuery(route.query)
+  if (searchQuery.value) {
+    performSearch()
+  }
+})
 </script>
 
 <style scoped>

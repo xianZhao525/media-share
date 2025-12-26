@@ -1,33 +1,36 @@
+// backend/routes/search.js
 import express from 'express';
 import { getDB } from '../db/connection.js';
-import { ObjectId } from 'mongodb';
 
 const router = express.Router();
-
-let indexEnsured = false; // 标记索引是否已创建
+let indexEnsured = false;
 
 /**
- * 初始化文本索引（首次搜索时调用）
+ * 确保文本索引存在（惰性创建）
  */
-const ensureTextIndex = async () => {
+const ensureTextIndex = async (db) => {
     if (indexEnsured) return;
 
     try {
-        const db = getDB();
         const indexes = await db.collection('items').indexes();
-        const hasTextIndex = indexes.some(index => index.key && index.key._fts === 'text');
+        const hasTextIndex = indexes.some(idx => idx.name === 'search_index');
 
         if (!hasTextIndex) {
+            console.log('🔧 正在创建文本搜索索引...');
             await db.collection('items').createIndex(
                 { title: "text", description: "text", tags: "text" },
-                { name: "search_index", weights: { title: 3, description: 2, tags: 1 } }
+                {
+                    name: "search_index",
+                    weights: { title: 3, description: 2, tags: 1 },
+                    default_language: "none"  // 支持中文
+                }
             );
             console.log('✅ 文本索引创建成功');
         }
-
         indexEnsured = true;
     } catch (error) {
-        console.error('文本索引检查失败:', error);
+        console.error('❌ 索引检查失败:', error);
+        // 不抛出错误，允许搜索继续
     }
 };
 
@@ -36,136 +39,112 @@ const ensureTextIndex = async () => {
  * @desc    全局搜索
  */
 router.get('/', async (req, res) => {
-    try {
-        // 惰性初始化索引
-        await ensureTextIndex();
+    console.log('📡 API [/api/search]: 搜索请求', req.query);
 
-        const { q, type, tag, page = 1, limit = 20 } = req.query;
+    try {
         const db = getDB();
+        await ensureTextIndex(db);
+
+        const { q, type, tag, page = 1, limit = 20, sort = 'relevance' } = req.query;
 
         // 参数验证
         const pageNum = Math.max(1, parseInt(page));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
 
-        if (!q && !type && !tag) {
+        console.log('搜索参数:', { q, type, tag, pageNum, limitNum, sort });
+
+        // 如果没有搜索词，返回空结果而不是报错
+        if (!q || q.trim() === '') {
             return res.json({
                 code: 200,
-                data: { results: [], total: 0, page: pageNum, limit: limitNum, pages: 0 },
-                message: '请输入搜索关键词或筛选条件'
+                data: {
+                    results: [],
+                    total: 0,
+                    page: pageNum,
+                    limit: limitNum,
+                    pages: 0
+                },
+                message: '请输入搜索关键词'
             });
         }
 
-        const filter = {};
-        if (q && q.trim()) filter.$text = { $search: q.trim() };
-        if (type && ['movie', 'book', 'music'].includes(type)) filter.type = type;
-        if (tag && tag.trim()) filter.tags = { $in: [tag.trim()] };
+        const filter = { status: 'active' }; // 只搜索活跃内容
+
+        // 文本搜索（清理特殊字符）
+        const searchText = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.$text = { $search: searchText };
+
+        // 类型筛选
+        if (type && ['movie', 'tv', 'anime', 'variety', 'documentary'].includes(type)) {
+            filter.type = type;
+        }
+
+        // 标签筛选
+        if (tag && tag.trim()) {
+            filter.tags = { $in: [tag.trim()] };
+        }
 
         const skip = (pageNum - 1) * limitNum;
 
+        // 构建排序
+        let sortOption = {};
+        if (sort === 'newest') {
+            sortOption = { createdAt: -1 };
+        } else if (sort === 'rating') {
+            sortOption = { averageRating: -1 };
+        } else if (sort === 'relevance') {
+            sortOption = { score: { $meta: "textScore" } };
+        }
+
+        console.log('查询条件:', JSON.stringify(filter));
+        console.log('排序条件:', JSON.stringify(sortOption));
+
+        // 执行查询
         const [items, total] = await Promise.all([
             db.collection('items')
-                .find(filter)
-                .sort(q ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+                .find(filter, sort === 'relevance' ? { score: { $meta: "textScore" } } : {})
+                .sort(sortOption)
                 .skip(skip)
                 .limit(limitNum)
                 .toArray(),
             db.collection('items').countDocuments(filter)
         ]);
 
-        if (items.length === 0) {
-            return res.json({
-                code: 200,
-                data: { results: [], total: 0, page: pageNum, limit: limitNum, pages: 0 },
-                message: '未找到相关内容'
-            });
-        }
+        console.log(`✅ 搜索到 ${total} 条结果，返回第 ${pageNum} 页`);
 
-        // 批量获取作者信息
-        const authorIds = items.map(item => new ObjectId(item.userId));
-        const authors = await db.collection('users')
-            .find({ _id: { $in: authorIds } })
-            .project({ username: 1, avatar: 1, _id: 1 })
-            .toArray();
-
-        const authorMap = authors.reduce((map, author) => {
-            map[author._id.toString()] = { username: author.username, avatar: author.avatar };
-            return map;
-        }, {});
-
+        // 格式化结果
         const results = items.map(item => ({
-            ...item,
-            author: authorMap[item.userId.toString()] || null
+            _id: item._id.toString(),
+            title: item.title,
+            description: item.description,
+            cover: item.cover,
+            type: item.type,
+            tags: item.tags || [],
+            viewCount: item.viewCount || 0,
+            averageRating: item.averageRating || 0,
+            createdAt: item.createdAt ? item.createdAt.toISOString() : new Date().toISOString(),
+            user: item.user || { username: '匿名' }
         }));
 
         res.json({
             code: 200,
-            data: { results, total, page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) },
+            data: {
+                results,
+                total,
+                page: pageNum,
+                limit: limitNum,
+                pages: Math.ceil(total / limitNum)
+            },
             message: '搜索成功'
         });
+
     } catch (error) {
-        console.error('搜索错误:', error);
+        console.error('❌ 搜索错误:', error);
         res.status(500).json({
             code: 500,
             data: null,
-            message: '服务器错误，请稍后重试'
+            message: `搜索失败: ${error.message}`
         });
-    }
-});
-
-/**
- * @route   GET /api/tags/popular
- */
-router.get('/tags/popular', async (req, res) => {
-    try {
-        const { limit = 10 } = req.query;
-        const limitNum = Math.min(20, Math.max(1, parseInt(limit)));
-        const db = getDB();
-
-        const pipeline = [
-            { $match: { tags: { $exists: true, $ne: [] } } },
-            { $unwind: "$tags" },
-            { $group: { _id: "$tags", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: limitNum },
-            { $project: { _id: 0, name: "$_id", count: 1 } }
-        ];
-
-        const tags = await db.collection('items').aggregate(pipeline).toArray();
-
-        res.json({ code: 200, data: tags, message: '获取热门标签成功' });
-    } catch (error) {
-        console.error('获取标签错误:', error);
-        res.status(500).json({ code: 500, data: null, message: '服务器错误' });
-    }
-});
-
-/**
- * @route   GET /api/tags/suggest
- */
-router.get('/tags/suggest', async (req, res) => {
-    try {
-        const { q } = req.query;
-        if (!q || q.trim().length < 1) {
-            return res.json({ code: 200, data: [], message: '请输入标签前缀' });
-        }
-
-        const db = getDB();
-        const pipeline = [
-            { $match: { tags: { $exists: true, $ne: [] } } },
-            { $unwind: "$tags" },
-            { $match: { tags: { $regex: `^${q.trim()}`, $options: 'i' } } },
-            { $group: { _id: "$tags", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 10 },
-            { $project: { _id: 0, name: "$_id" } }
-        ];
-
-        const suggestions = await db.collection('items').aggregate(pipeline).toArray();
-
-        res.json({ code: 200, data: suggestions, message: '获取标签建议成功' });
-    } catch (error) {
-        console.error('获取标签建议错误:', error);
-        res.status(500).json({ code: 500, data: null, message: '服务器错误' });
     }
 });
 

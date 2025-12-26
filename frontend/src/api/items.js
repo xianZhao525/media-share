@@ -5,27 +5,31 @@ export default {
   // 获取内容列表
   async getItems(params = {}) {
     console.log('📡 API: getItems', params);
-    
+
     // 转换参数以匹配后端
     const backendParams = {};
-    
+
     // 分页参数
     if (params.page) backendParams.page = params.page;
     if (params.limit) backendParams.limit = params.limit;
-    
+
     // 筛选参数
     if (params.type) backendParams.type = params.type;
     if (params.tags) backendParams.tags = params.tags;
-    
+    if (params.tag) backendParams.tag = params.tag;  // 添加标签筛选支持
+
     // 搜索参数
     if (params.q) backendParams.q = params.q;
-    
+
     // 排序参数
     if (params.sort) backendParams.sort = params.sort;
-    
+    if (params.sortBy) backendParams.sortBy = params.sortBy;
+    if (params.sortOrder) backendParams.sortOrder = params.sortOrder;
+    if (params.minRating) backendParams.minRating = params.minRating;
+
     // 字段选择
     if (params.fields) backendParams.fields = params.fields;
-    
+
     const response = await api.get('/api/items', { params: backendParams });
     console.log('📡 API Response:', response);
     return response;
@@ -34,7 +38,7 @@ export default {
   // 获取热门内容
   async getHotItems(params = {}) {
     console.log('📡 API: getHotItems');
-    const response = await api.get('/api/items/hot', { 
+    const response = await api.get('/api/items/hot', {
       params: { limit: params.limit || 6, type: params.type }
     });
     return response;
@@ -43,7 +47,7 @@ export default {
   // 获取最新内容
   async getLatestItems(params = {}) {
     console.log('📡 API: getLatestItems');
-    const response = await api.get('/api/items/latest', { 
+    const response = await api.get('/api/items/latest', {
       params: { limit: params.limit || 8, type: params.type }
     });
     return response;
@@ -56,16 +60,32 @@ export default {
     return response;
   },
 
-  // 搜索内容
-  async searchItems(query) {
-    console.log('📡 API: searchItems', query);
-    const response = await api.get('/api/items/search', { 
-      params: { q: query } 
-    });
+  // ===================================================================
+  // 关键修复：搜索功能应调用独立的 /api/search 路由，而不是 /api/items/search
+  // ===================================================================
+  async searchItems(query, params = {}) {
+    console.log('📡 API: searchItems', query, params);
+
+    // 构建搜索参数
+    const searchParams = {
+      q: query,
+      page: params.page || 1,
+      limit: params.limit || 20,
+      sort: params.sort || 'relevance'
+    };
+
+    // 添加可选筛选条件
+    if (params.type) searchParams.type = params.type;
+    if (params.tag) searchParams.tag = params.tag;
+    if (params.minRating) searchParams.minRating = params.minRating;
+
+    // 调用独立的搜索路由
+    const response = await api.get('/api/search', { params: searchParams });
     return response;
   },
+  // ===================================================================
 
-  // 获取统计数据 - 现在后端有这个接口了
+  // 获取统计数据
   async getStats() {
     console.log('📡 API: getStats');
     try {
