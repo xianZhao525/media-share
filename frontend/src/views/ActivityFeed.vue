@@ -113,6 +113,7 @@
                 :class="{ active: activity.isLiked }"
                 @click="toggleLike(activity)"
                 title="点赞"
+                :data-activity-id="activity._id"
               >
                 <i>{{ activity.isLiked ? '❤️' : '🤍' }}</i>
                 <span v-if="activity.likes > 0">{{ activity.likes }}</span>
@@ -170,6 +171,47 @@
               </span>
             </div>
           </div>
+
+          <!-- 评论区域（已移入 v-for 循环内） -->
+          <div class="comment-section">
+            <!-- 现有评论列表 -->
+            <div v-if="localComments[activity._id]?.length > 0" class="comment-list">
+              <div 
+                v-for="comment in localComments[activity._id]" 
+                :key="comment._id"
+                class="comment-item fade-in"
+              >
+                <img :src="comment.user.avatar" class="comment-avatar" />
+                <div class="comment-content">
+                  <div class="comment-header">
+                    <span class="comment-user">{{ comment.user.name }}</span>
+                    <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                  </div>
+                  <p class="comment-text">{{ comment.content }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 评论输入框 -->
+            <div class="comment-input-wrapper">
+              <img :src="currentUser.avatar" class="comment-avatar" />
+              <div class="comment-input-container">
+                <input 
+                  v-model="commentInputs[activity._id]"
+                  @keyup.enter="submitComment(activity)"
+                  placeholder="写下你的评论..."
+                  class="comment-input"
+                />
+                <button 
+                  @click="submitComment(activity)"
+                  class="comment-submit"
+                  :disabled="!commentInputs[activity._id]?.trim()"
+                >
+                  发送
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-if="hasMore" class="load-more">
@@ -203,6 +245,12 @@ const activeFilter = ref('all')
 const page = ref(1)
 const hasMore = ref(true)
 
+// 评论输入内容（按activityId存储）
+const commentInputs = ref({})
+
+// 本地评论列表（按activityId存储）
+const localComments = ref({})
+
 // 模拟当前用户数据
 const currentUser = ref({
   _id: '1',
@@ -225,40 +273,163 @@ const filters = [
   { key: 'media', label: '含图片', icon: '🖼️' }
 ]
 
+// 关键修复：获取认证 token
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token')
+  return token ? { 'x-auth-token': token } : {}
+}
+
 // 获取动态流
+// 获取动态流（简化版：直接使用模拟数据）
 const fetchActivities = async (reset = false) => {
   if (reset) {
     page.value = 1
     activities.value = []
-    loading.value = true
   } else if (page.value > 1) {
     loadingMore.value = true
   }
+  
+  // 直接显示模拟数据
+  useMockData()
+  
+  loading.value = false
+  loadingMore.value = false
+}
 
-  try {
-    // 模拟API调用
-    const response = await axios.get('/api/activities/feed', {
-      params: {
-        page: page.value,
-        limit: 10,
-        filter: activeFilter.value
-      }
-    })
 
-    if (reset) {
-      activities.value = response.data.activities
-    } else {
-      activities.value.push(...response.data.activities)
+// 发布动态
+// const createPost = async () => {
+//   if (!newPostContent.value.trim()) return
+
+//   try {
+//     const response = await axios.post('/api/activities', {
+//       content: newPostContent.value,
+//       type: 'post'
+//     })
+
+//     // 将新动态添加到列表顶部
+//     activities.value.unshift({
+//       ...response.data.activity,
+//       user: currentUser.value,
+//       likes: 0,
+//       comments: 0,
+//       isLiked: false
+//     })
+
+//     // 清空输入框
+//     newPostContent.value = ''
+    
+//     alert('动态发布成功！')
+//   } catch (error) {
+//     console.error('发布动态失败:', error)
+//     alert('发布失败，请重试')
+//   }
+// }
+
+// 点赞/取消点赞
+// const toggleLike = async (activity) => {
+//   try {
+//     if (activity.isLiked) {
+//       await axios.delete(`/api/activities/${activity._id}/like`)
+//       activity.likes--
+//     } else {
+//       await axios.post(`/api/activities/${activity._id}/like`)
+//       activity.likes++
+//     }
+//     activity.isLiked = !activity.isLiked
+//   } catch (error) {
+//     console.error('点赞操作失败:', error)
+//   }
+// }
+
+// 模拟数据
+// const mockActivities = [
+//   {
+//     _id: '1',
+//     user: {
+//       _id: '2',
+//       name: '张三',
+//       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan',
+//       isOnline: true
+//     },
+//     content: '今天天气真好！分享一张美照给大家～',
+//     images: [
+//       'https://picsum.photos/400/300?random=1',
+//       'https://picsum.photos/400/300?random=2'
+//     ],
+//     type: 'post',
+//     likes: 24,
+//     comments: 8,
+//     shares: 3,
+//     isLiked: true,
+//     tags: ['摄影', '风景'],
+//     createdAt: new Date(Date.now() - 3600000).toISOString()
+//   },
+//   {
+//     _id: '2',
+//     user: {
+//       _id: '3',
+//       name: '李四',
+//       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lisi',
+//       isOnline: false
+//     },
+//     content: '刚读完一本很棒的书！推荐给大家！',
+//     type: 'post',
+//     likes: 42,
+//     comments: 15,
+//     shares: 5,
+//     isLiked: false,
+//     tags: ['阅读', '推荐'],
+//     createdAt: new Date(Date.now() - 7200000).toISOString()
+//   }
+// ]
+// 使用模拟数据
+// 使用模拟数据（修复版）
+const useMockData = () => {
+  const mockActivities = [
+    {
+      _id: '1',
+      user: {
+        _id: '2',
+        name: '张三',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan',
+        isOnline: true
+      },
+      content: '今天天气真好！分享一张美照给大家～',
+      images: [
+        'https://picsum.photos/400/300?random=1',
+        'https://picsum.photos/400/300?random=2'
+      ],
+      type: 'post',
+      likes: 24,
+      comments: 8,
+      shares: 3,
+      isLiked: false,
+      tags: ['摄影', '风景'],
+      createdAt: new Date(Date.now() - 3600000).toISOString()
+    },
+    {
+      _id: '2',
+      user: {
+        _id: '3',
+        name: '李四',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lisi',
+        isOnline: false
+      },
+      content: '刚读完一本很棒的书！推荐给大家！',
+      images: [],
+      type: 'post',
+      likes: 42,
+      comments: 15,
+      shares: 5,
+      isLiked: false,
+      tags: ['阅读', '推荐'],
+      createdAt: new Date(Date.now() - 7200000).toISOString()
     }
-
-    hasMore.value = response.data.hasMore
-  } catch (error) {
-    console.error('获取动态失败:', error)
-    alert('加载动态失败，请刷新页面重试')
-  } finally {
-    loading.value = false
-    loadingMore.value = false
-  }
+  ]
+  
+  activities.value = mockActivities
+  hasMore.value = false
 }
 
 // 发布动态
@@ -266,24 +437,40 @@ const createPost = async () => {
   if (!newPostContent.value.trim()) return
 
   try {
-    const response = await axios.post('/api/activities', {
+    const token = localStorage.getItem('token')
+    const config = {
+      headers: {
+        'x-auth-token': token
+      }
+    }
+
+    const postData = {
       content: newPostContent.value,
-      type: 'post'
-    })
+      type: 'post',
+      images: [] // 可以添加图片上传逻辑
+    }
 
-    // 将新动态添加到列表顶部
-    activities.value.unshift({
-      ...response.data.activity,
-      user: currentUser.value,
-      likes: 0,
-      comments: 0,
-      isLiked: false
-    })
-
-    // 清空输入框
-    newPostContent.value = ''
+    const response = await axios.post('http://localhost:3001/api/activities', postData, config)
     
-    alert('动态发布成功！')
+    if (response.data.code === 200) {
+      // 将新动态添加到列表顶部
+      const newActivity = {
+        ...response.data.data,
+        user: currentUser.value,
+        likes: 0,
+        comments: 0,
+        isLiked: false,
+        createdAt: new Date().toISOString()
+      }
+      
+      activities.value.unshift(newActivity)
+      newPostContent.value = ''
+      
+      // 更新统计
+      feedStats.value.following++
+    } else {
+      alert('发布失败：' + response.data.message)
+    }
   } catch (error) {
     console.error('发布动态失败:', error)
     alert('发布失败，请重试')
@@ -291,18 +478,55 @@ const createPost = async () => {
 }
 
 // 点赞/取消点赞
-const toggleLike = async (activity) => {
+// const toggleLike = async (activity) => {
+//   try {
+//     const token = localStorage.getItem('token')
+//     const config = {
+//       headers: {
+//         'x-auth-token': token
+//       }
+//     }
+
+//     if (activity.isLiked) {
+//       await axios.delete(`http://localhost:3001/api/activities/${activity._id}/like`, config)
+//       activity.likes--
+//     } else {
+//       await axios.post(`http://localhost:3001/api/activities/${activity._id}/like`, {}, config)
+//       activity.likes++
+//     }
+    
+//     activity.isLiked = !activity.isLiked
+//   } catch (error) {
+//     console.error('点赞操作失败:', error)
+//     alert('操作失败，请稍后重试')
+//   }
+// }
+// 点赞/取消点赞（本地临时状态）
+const toggleLike = (activity) => {
   try {
+    // 立即更新UI，不发送API请求
     if (activity.isLiked) {
-      await axios.delete(`/api/activities/${activity._id}/like`)
-      activity.likes--
+      activity.likes = Math.max(0, activity.likes - 1)
+      activity.isLiked = false
+      console.log(`取消点赞: ${activity._id}`)
     } else {
-      await axios.post(`/api/activities/${activity._id}/like`)
-      activity.likes++
+      activity.likes = (activity.likes || 0) + 1
+      activity.isLiked = true
+      console.log(`点赞成功: ${activity._id}`)
     }
-    activity.isLiked = !activity.isLiked
+    
+    // 添加视觉反馈动画
+    const button = document.querySelector(`[data-activity-id="${activity._id}"] .action-btn`)
+    if (button) {
+      button.style.transform = 'scale(1.2)'
+      setTimeout(() => {
+        button.style.transform = 'scale(1)'
+      }, 200)
+    }
+    
   } catch (error) {
     console.error('点赞操作失败:', error)
+    alert('操作失败，请稍后重试')
   }
 }
 
@@ -335,6 +559,47 @@ const searchTag = (tag) => {
 const goToDiscover = () => {
   console.log('去发现页面')
   // 这里可以跳转到发现页面
+}
+
+// 提交评论（本地临时存储）
+const submitComment = (activity) => {
+  const content = commentInputs.value[activity._id]?.trim()
+  
+  if (!content) {
+    alert('请输入评论内容')
+    return
+  }
+  
+  // 初始化该动态的评论列表
+  if (!localComments.value[activity._id]) {
+    localComments.value[activity._id] = []
+  }
+  
+  // 创建新评论对象
+  const newComment = {
+    _id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    content: content,
+    user: {
+      _id: currentUser.value._id,
+      name: currentUser.value.name,
+      avatar: currentUser.value.avatar
+    },
+    createdAt: new Date().toISOString()
+  }
+  
+  // 添加到本地列表
+  localComments.value[activity._id].unshift(newComment)
+  
+  // 更新评论计数
+  activity.comments = (activity.comments || 0) + 1
+  
+  // 清空输入框
+  commentInputs.value[activity._id] = ''
+  
+  console.log(`评论成功: ${activity._id}`, newComment)
+  
+  // 添加成功提示
+  alert('评论发布成功！')
 }
 
 // 格式化时间
@@ -371,59 +636,24 @@ const formatTime = (timestamp) => {
 }
 
 // 组件挂载时获取数据
+// onMounted(() => {
+//   fetchActivities()
+// })
+
+// 角色五修改 组件挂载时立即显示模拟数据
 onMounted(() => {
-  fetchActivities()
+  // 直接加载模拟数据，不等待API
+  useMockData()
+  loading.value = false // 确保加载状态关闭
 })
 
-// 模拟数据
-const mockActivities = [
-  {
-    _id: '1',
-    user: {
-      _id: '2',
-      name: '张三',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan',
-      isOnline: true
-    },
-    content: '今天天气真好！分享一张美照给大家～',
-    images: [
-      'https://picsum.photos/400/300?random=1',
-      'https://picsum.photos/400/300?random=2'
-    ],
-    type: 'post',
-    likes: 24,
-    comments: 8,
-    shares: 3,
-    isLiked: true,
-    tags: ['摄影', '风景'],
-    createdAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    _id: '2',
-    user: {
-      _id: '3',
-      name: '李四',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lisi',
-      isOnline: false
-    },
-    content: '刚读完一本很棒的书！推荐给大家！',
-    type: 'post',
-    likes: 42,
-    comments: 15,
-    shares: 5,
-    isLiked: false,
-    tags: ['阅读', '推荐'],
-    createdAt: new Date(Date.now() - 7200000).toISOString()
-  }
-]
-
-// 如果API未准备好，使用模拟数据
-setTimeout(() => {
-  if (activities.value.length === 0) {
-    activities.value = mockActivities
-    loading.value = false
-  }
-}, 1000)
+// 角色五修改 如果API未准备好，使用模拟数据
+// setTimeout(() => {
+//   if (activities.value.length === 0) {
+//     activities.value = mockActivities
+//     loading.value = false
+//   }
+// }, 1000)
 </script>
 
 <style scoped>
@@ -952,6 +1182,151 @@ setTimeout(() => {
   }
 
   .filter-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+/* 评论区域 角色五新增*/
+.comment-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #222;
+}
+
+.comment-list {
+  margin-bottom: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.comment-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background-color: #111;
+  border-radius: 12px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.comment-user {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00bfff;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #666;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.comment-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.comment-input-container {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.comment-input:focus {
+  border-color: #00bfff;
+}
+
+.comment-submit {
+  background: linear-gradient(135deg, #00bfff, #0080ff);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.comment-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0080ff, #0066cc);
+  transform: scale(1.05);
+}
+
+.comment-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #333;
+}
+
+/* 适配移动端 */
+@media (max-width: 768px) {
+  .comment-input-wrapper {
+    gap: 8px;
+  }
+  
+  .comment-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .comment-input {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .comment-submit {
     padding: 8px 16px;
     font-size: 13px;
   }

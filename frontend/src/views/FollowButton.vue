@@ -25,13 +25,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+// import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
   userId: {
     type: String,
-    required: true
+    required: true,
+    default: ''
   },
   initialFollowing: {
     type: Boolean,
@@ -55,29 +57,85 @@ const isFollowing = ref(props.initialFollowing)
 const isLoading = ref(false)
 const showUnfollow = ref(false)
 
-// 计算属性
+// 关键修复：验证 userId 是否有效
+const isValidUserId = computed(() => {
+  return props.userId && 
+         props.userId !== 'undefined' && 
+         props.userId !== 'null' && 
+         props.userId !== 'current'
+})
+
+// 关键修复：监听 userId 变化
+watch(() => props.userId, (newVal) => {
+  if (newVal && isValidUserId.value) {
+    isFollowing.value = props.initialFollowing
+  }
+}, { immediate: true })
+
 const iconClass = computed(() => {
   return isFollowing.value ? 'icon-check' : 'icon-add-user'
 })
 
 // 切换关注状态
+// const toggleFollow = async () => {
+//   if (isLoading.value) return
+  
+//   isLoading.value = true
+//   try {
+//     if (isFollowing.value) {
+//       await axios.delete(`/api/users/${props.userId}/follow`)
+//     } else {
+//       await axios.post(`/api/users/${props.userId}/follow`)
+//     }
+    
+//     isFollowing.value = !isFollowing.value
+//     emit('follow-change', isFollowing.value)
+//   } catch (error) {
+//     console.error('关注操作失败:', error)
+//     // 这里可以显示错误提示
+//     alert(error.response?.data?.message || '操作失败，请重试')
+//   } finally {
+//     isLoading.value = false
+//   }
+// }
+
+// 切换关注状态
 const toggleFollow = async () => {
+  // 关键修复：验证 userId
+  if (!props.userId || props.userId === 'undefined' || props.userId === 'current') {
+    alert('无法操作：用户ID无效')
+    return
+  }
+  
   if (isLoading.value) return
   
   isLoading.value = true
   try {
+    const token = localStorage.getItem('token')
+    const config = {
+      headers: {
+        'x-auth-token': token
+      }
+    }
+
     if (isFollowing.value) {
-      await axios.delete(`/api/users/${props.userId}/follow`)
+      await axios.delete(`http://localhost:3001/api/users/${props.userId}/follow`, config)
     } else {
-      await axios.post(`/api/users/${props.userId}/follow`)
+      await axios.post(`http://localhost:3001/api/users/${props.userId}/follow`, {}, config)
     }
     
     isFollowing.value = !isFollowing.value
     emit('follow-change', isFollowing.value)
   } catch (error) {
     console.error('关注操作失败:', error)
-    // 这里可以显示错误提示
-    alert(error.response?.data?.message || '操作失败，请重试')
+    // 关键修复：更好的错误提示
+    if (error.response?.status === 401) {
+      alert('请先登录后再操作')
+    } else if (error.response?.status === 404) {
+      alert('用户不存在')
+    } else {
+      alert(error.response?.data?.message || '操作失败，请重试')
+    }
   } finally {
     isLoading.value = false
   }

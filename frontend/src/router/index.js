@@ -10,7 +10,6 @@ import ItemDetailView from '@/views/ItemDetailView.vue'
 import ItemEdit from '@/views/ItemEdit.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
-// import ProfileView from '@/views/ProfileView.vue'
 import NotFound from '@/views/NotFound.vue'
 import ActivityFeed from '@/views/ActivityFeed.vue'
 import UserProfile from '@/views/UserProfile.vue'
@@ -84,7 +83,7 @@ const router = createRouter({
       }
     },
     {
-      path: '/profile',  // ✅ 个人中心（替换为新组件）
+      path: '/profile/:id?',  // ✅ 个人中心（替换为新组件）
       name: 'profile',
       component: UserProfile,
       meta: {

@@ -65,15 +65,23 @@
 
           <!-- 操作按钮 -->
           <div class="tx-action-buttons">
-            <FollowButton 
+            <!-- <FollowButton 
               v-if="!isSelf"
               :userId="user._id"
               :initialFollowing="user.isFollowing"
               size="large"
               @follow-change="handleFollowChange"
               class="tx-follow-btn"
+            /> -->
+            <!-- 只在 userId 有效时显示 FollowButton -->
+            <FollowButton 
+              v-if="!isSelf && isValidUserId"
+              :userId="String(user._id)"
+              :initialFollowing="user.isFollowing"
+              size="large"
+              @follow-change="handleFollowChange"
+              class="tx-follow-btn"
             />
-            
             <button v-if="!isSelf" class="tx-message-btn" @click="sendMessage">
               <i class="tx-icon-message">💬</i>
               <span>发消息</span>
@@ -89,6 +97,12 @@
             </button>
             
             <!-- 新增：跳转到动态页面按钮 -->
+            <!-- <button class="tx-feed-btn" @click="goToActivityFeed">
+              <i class="tx-icon-feed">📱</i>
+              <span>动态广场</span>
+            </button> -->
+
+            <!-- 动态广场按钮 - 修复路由跳转 -->
             <button class="tx-feed-btn" @click="goToActivityFeed">
               <i class="tx-icon-feed">📱</i>
               <span>动态广场</span>
@@ -293,6 +307,10 @@
     </div>
 
     <!-- 浮动按钮 -->
+    <!-- <button v-if="isSelf" class="tx-profile-float-btn" @click="showPostModal">
+      <i class="tx-icon-plus">✏️</i>
+    </button> -->
+
     <button v-if="isSelf" class="tx-profile-float-btn" @click="showPostModal">
       <i class="tx-icon-plus">✏️</i>
     </button>
@@ -300,14 +318,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+// import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FollowButton from './FollowButton.vue'
 import { activityApi } from '@/api/activityApi';
+import axios from 'axios';
 
 const route = useRoute()
 const router = useRouter()
-const userId = route.params.id
+// const userId = route.params.id
+const userId = computed(() => {
+  return route.params.id || route.query.id || 'current'
+})
 
 // 响应式数据
 const user = ref({
@@ -326,8 +349,21 @@ const user = ref({
   createdAt: '2022-01-15'
 })
 
+// const isSelf = computed(() => {
+//   return userId === 'current' || userId === 'me' || userId === 'self'
+// })
+
+// 关键修复：验证 userId 是否有效
+const isValidUserId = computed(() => {
+  return user.value._id && 
+         user.value._id !== 'undefined' && 
+         user.value._id !== 'null' && 
+         user.value._id !== 'current'
+})
+
+// 关键修复：确保 isSelf 计算正确
 const isSelf = computed(() => {
-  return userId === 'current' || userId === 'me' || userId === 'self'
+  return userId === 'current' || userId === 'me' || userId === 'self' || !userId
 })
 
 // 统计数据
@@ -349,30 +385,101 @@ const tabs = ref([
 
 const activeTab = ref('activities')
 
-// 模拟数据
-const activities = ref([
-  {
-    _id: 'act001',
-    content: '刚看完《流浪地球2》，特效真的太震撼了！中国科幻电影的里程碑之作。',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=400&fit=crop' },
-      { url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=400&fit=crop' }
-    ],
-    likeCount: 42,
-    commentCount: 8,
-    createdAt: new Date(Date.now() - 1800000)
-  },
-  {
-    _id: 'act002',
-    content: '分享今天在西湖拍的美景，春色满园关不住，一枝红杏出墙来。',
-    images: [
-      { url: 'https://images.unsplash.com/photo-1511300636408-a63a89df3482?w=400&h=300&fit=crop' }
-    ],
-    likeCount: 89,
-    commentCount: 15,
-    createdAt: new Date(Date.now() - 3600000)
+// 数据列表
+const activities = ref([])
+// const photos = ref([])
+// const collections = ref([])
+// const relationships = ref([])
+
+// 关键修复：确保 userId 正确初始化
+onMounted(() => {
+  // 如果是当前用户，从 localStorage 获取真实用户 ID
+  if (isSelf.value) {
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        user.value._id = payload.userId || 'current'
+        user.value.username = payload.username || '当前用户'
+      } catch (e) {
+        console.warn('无法解析token:', e)
+      }
+    }
   }
-])
+  
+  loadUserActivities()
+})
+
+// 加载用户动态
+const loadUserActivities = async () => {
+  try {
+    // 关键修复：添加认证头
+    const token = localStorage.getItem('token')
+    const config = {
+      headers: {
+        'x-auth-token': token
+      },
+      params: {
+        page: 1,
+        limit: 20
+      }
+    }
+    // 关键修复：确保 userId 有效
+    const targetUserId = userId.value || 'current'
+    const response = await axios.get(`/api/activities/users/${targetUserId}`, config)
+    activities.value = response.data.data || []
+  } catch (error) {
+    console.error('加载用户动态失败:', error)
+    // 使用模拟数据
+    activities.value = [
+      {
+        _id: 'act001',
+        content: '刚看完《流浪地球2》，特效真的太震撼了！中国科幻电影的里程碑之作。',
+        images: [
+          { url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=400&fit=crop' },
+          { url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=400&fit=crop' }
+        ],
+        likeCount: 42,
+        commentCount: 8,
+        createdAt: new Date(Date.now() - 1800000)
+      },
+      {
+        _id: 'act002',
+        content: '分享今天在西湖拍的美景，春色满园关不住，一枝红杏出墙来。',
+        images: [
+          { url: 'https://images.unsplash.com/photo-1511300636408-a63a89df3482?w=400&h=300&fit=crop' }
+        ],
+        likeCount: 89,
+        commentCount: 15,
+        createdAt: new Date(Date.now() - 3600000)
+      }
+    ]
+  }
+}
+// 模拟数据
+// const activities = ref([
+//   {
+//     _id: 'act001',
+//     content: '刚看完《流浪地球2》，特效真的太震撼了！中国科幻电影的里程碑之作。',
+//     images: [
+//       { url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=400&fit=crop' },
+//       { url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=400&fit=crop' }
+//     ],
+//     likeCount: 42,
+//     commentCount: 8,
+//     createdAt: new Date(Date.now() - 1800000)
+//   },
+//   {
+//     _id: 'act002',
+//     content: '分享今天在西湖拍的美景，春色满园关不住，一枝红杏出墙来。',
+//     images: [
+//       { url: 'https://images.unsplash.com/photo-1511300636408-a63a89df3482?w=400&h=300&fit=crop' }
+//     ],
+//     likeCount: 89,
+//     commentCount: 15,
+//     createdAt: new Date(Date.now() - 3600000)
+//   }
+// ])
 
 const photos = ref([
   {
@@ -432,17 +539,17 @@ const relationships = ref([
 ])
 
 // 加载用户动态
-const loadUserActivities = async () => {
-  try {
-    const response = await activityApi.getUserActivities(userId, {
-      page: 1,
-      limit: 20
-    });
-    activities.value = response.data;
-  } catch (error) {
-    console.error('加载用户动态失败:', error);
-  }
-};
+// const loadUserActivities = async () => {
+//   try {
+//     const response = await activityApi.getUserActivities(userId, {
+//       page: 1,
+//       limit: 20
+//     });
+//     activities.value = response.data;
+//   } catch (error) {
+//     console.error('加载用户动态失败:', error);
+//   }
+// };
 
 // 方法
 const handleFollowChange = (isFollowing) => {
@@ -455,10 +562,22 @@ const handleFollowChange = (isFollowing) => {
   }
 }
 
+// const sendMessage = () => {
+//   console.log('发送消息给:', user.value.username)
+// }
+
+// 发送消息（关键修复：实现实际跳转）
 const sendMessage = () => {
   console.log('发送消息给:', user.value.username)
+  // 跳转到聊天页面
+  router.push({
+    path: '/message',
+    query: {
+      userId: user.value._id,
+      username: user.value.username
+    }
+  })
 }
-
 const editProfile = () => {
   router.push('/profile/edit')
 }
@@ -484,8 +603,14 @@ const viewUserProfile = (userId) => {
 }
 
 // 新增：跳转到动态页面
+// const goToActivityFeed = () => {
+//   router.push('/activity-feed')
+// }
+
+// 关键修复：使用正确的路由路径
 const goToActivityFeed = () => {
-  router.push('/activity-feed')
+  console.log('跳转到动态广场')
+  router.push('/activities')  // 修改为 /activities 而不是 /activity-feed
 }
 
 const formatTime = (timestamp) => {

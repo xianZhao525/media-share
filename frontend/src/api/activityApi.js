@@ -4,6 +4,20 @@ import axios from 'axios'
 
 const API_BASE_URL = 'http://localhost:3001/api'
 
+// 关键修复：添加请求拦截器
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers['x-auth-token'] = token
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
 const activityApi = {
   // 获取动态流
   getFeed: async (params = {}) => {
@@ -13,7 +27,9 @@ const activityApi = {
 
   // 获取用户动态
   getUserActivities: async (userId, params = {}) => {
-    const response = await axios.get(`${API_BASE_URL}/users/${userId}/activities`, { params })
+    // 关键修复：处理 undefined userId
+    const targetUserId = userId || 'current'
+    const response = await axios.get(`${API_BASE_URL}/users/${targetUserId}/activities`, { params })
     return response.data
   },
 
@@ -87,7 +103,7 @@ const activityApi = {
   uploadImage: async (file) => {
     const formData = new FormData()
     formData.append('image', file)
-    
+
     const response = await axios.post(`${API_BASE_URL}/upload/image`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
