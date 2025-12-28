@@ -24,7 +24,12 @@
       <div class="nav-links">
         <router-link to="/" class="nav-link">首页</router-link>
         <router-link to="/explore" class="nav-link">探索</router-link>
-        <router-link to="/search" class="nav-link">搜索</router-link>
+        <!-- <router-link to="/search" class="nav-link">搜索</router-link> -->
+
+        <!-- ✅ 添加创建内容链接 -->
+        <router-link v-if="isAuthenticated" to="/create" class="nav-link">
+          <i>➕</i> 创建
+        </router-link>
 
         <!-- ✅ 新增：动态流入口 -->
         <router-link to="/activities" class="nav-link" v-if="isAuthenticated">
@@ -175,6 +180,14 @@ onMounted(() => {
   align-items: center;
   gap: 1.5rem;
 }
+
+/* 在现有的 .nav-links 样式后添加 */
+.nav-links i {
+  margin-right: 4px;
+  font-style: normal;
+}
+
+
 
 .nav-link {
   color: #333;

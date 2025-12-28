@@ -41,7 +41,7 @@ const router = createRouter({
       component: ItemCreate,
       meta: {
         title: '创建内容 - 媒体分享平台',
-        requiresAuth: false
+        requiresAuth: true
       }
     },
     {

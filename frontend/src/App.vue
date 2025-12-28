@@ -11,7 +11,7 @@
     <!-- 页脚（可以是你负责的全局样式部分） -->
     <footer class="app-footer">
       <div class="footer-content">
-        <p>© 2025 在线影视分享平台 - 角色五（搜索与全局功能）开发</p>
+        <p>© 2025 在线影视分享平台</p>
         <p class="footer-links">
           <a href="/about">关于我们</a> | 
           <a href="/help">帮助中心</a> | 
